@@ -111,7 +111,8 @@ ComposeCrux <- ggproto(
     title_position = "legend.title.position",
     text_position = "legend.text.position",
     title = "legend.title",
-    margin = "legend.margin"
+    margin = "legend.margin",
+    background = "legend.background"
   ),
 
   setup_elements = function(params, elements, theme) {
@@ -126,7 +127,7 @@ ComposeCrux <- ggproto(
     elements$text_position <- elements$text_position %||%
       switch(params$direction, horizontal = "bottom", vertical = "right")
 
-    check_position(elements$title_position, .trbl, arg = "legend.title.position")
+    check_position(elements$title_position, theta = FALSE, arg = "legend.title.position")
     elements
   },
 
@@ -139,9 +140,10 @@ ComposeCrux <- ggproto(
       return(zeroGrob())
     }
 
-    position  <- params$position  <- params$position  %||% position
     direction <- params$direction <- params$direction %||% direction
-    check_position(position, .trbl)
+    position  <- params$position  <- params$position  %||% position
+    position  <- switch(position, inside = "right", position)
+    check_position(position)
     check_argmatch(direction, c("horizontal", "vertical"))
 
     theme <- theme + params$theme
@@ -218,6 +220,12 @@ ComposeCrux <- ggproto(
       )
       if (!is.null(elems$margin)) {
         gt <- gtable_add_padding(gt, elems$margin)
+      }
+      if (!is.zero(elems$background)) {
+        gt <- gtable_add_grob(
+          gt, element_grob(elems$background), name = "background",
+          clip = "off", t = 1, r = -1, b = -1, l = 1, z = -Inf
+        )
       }
     }
     gt

@@ -1,3 +1,22 @@
+# legendry 0.2.1
+
+This is a patch release with a few bug fixes and a tiny polish.
+
+* Fixed bug in `guide_circles()` used for multiple layers (#58)
+* Fixed bug hindering `position = "inside"` placement (#42)
+* Fixed bug in `theme_guide(key.size, key.height, key.width)` (#41)
+* Complete guides based on a crux composition now render the `legend.background` 
+  element (#50)
+* A better attempt to honour ggplot2's mechanism for `<AsIs>` variables (#45)
+* Better alignment of `compose_stack(side.titles)` (#48)
+* Fixed aesthetic standardisation in `override.aes` arguments (#60)
+* Improvements to density and histogram gizmos (#62):
+    * The default key now depends on the scale type: continuous scales invoke 
+    `key_sequence()` and binned scales invoke `key_bins()`.
+    * When using a binned key in `gizmo_histogram()`, the default `hist(breaks)`
+    argument is populated with the key's breaks.
+* Fix capping issue with non-canonical rescalers in `primitive_line()` (#67)
+
 # legendry 0.2.0
 
 This is a small feature release introducing dendrogram scales and a size guide.

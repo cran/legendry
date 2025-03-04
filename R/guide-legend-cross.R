@@ -73,7 +73,7 @@ guide_legend_cross <- function(
   order = 0
 ) {
 
-  check_position(position, allow_null = TRUE)
+  check_position(position, theta = FALSE, inside = TRUE, allow_null = TRUE)
   check_argmatch(direction, c("horizontal", "vertical"), allow_null = TRUE)
   check_bool(swap)
 
@@ -91,7 +91,7 @@ guide_legend_cross <- function(
     key = key,
     title = title,
     dim_order = dim_order,
-    override.aes = override.aes,
+    override.aes = rename_aes(override.aes),
     col_text = col_text,
     reverse = reverse,
     theme = theme,

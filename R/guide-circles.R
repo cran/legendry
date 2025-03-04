@@ -96,7 +96,7 @@ guide_circles <- function(
     vjust = vjust,
     text_position = text_position,
     clip_text = clip_text,
-    override.aes = override.aes,
+    override.aes = rename_aes(override.aes),
     position = position,
     direction = direction,
     super = GuideCircles
@@ -133,7 +133,9 @@ GuideCircles <- ggproto(
     params
   },
 
-  get_layer_key = GuideLegend$get_layer_key,
+  process_layers = function(self, params, layers, data = NULL) {
+    GuideLegend$process_layers(params, layers, data)
+  },
 
   build_decor = function(decor, grobs, elements, params) {
 
