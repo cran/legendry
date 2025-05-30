@@ -1,3 +1,9 @@
+# legendry 0.2.2
+
+This is a patch release without new features, improvements or bug fixes. 
+The patch aims to make legendry forwards-compatible with a planned ggplot2 
+release.
+
 # legendry 0.2.1
 
 This is a patch release with a few bug fixes and a tiny polish.
