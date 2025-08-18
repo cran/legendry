@@ -1,6 +1,6 @@
 Package: legendry
 Title: Extended Legends and Axes for 'ggplot2'
-Version: 0.2.2
+Version: 0.2.3
 Authors@R: 
     person("Teun", "van den Brand", , "tahvdbrand@gmail.com", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0002-9335-7468"))
@@ -21,9 +21,9 @@ Config/testthat/edition: 3
 Encoding: UTF-8
 RoxygenNote: 7.3.2
 NeedsCompilation: no
-Packaged: 2025-05-30 08:43:17 UTC; Teun
+Packaged: 2025-08-18 18:03:04 UTC; Teun
 Author: Teun van den Brand [aut, cre, cph] (ORCID:
     <https://orcid.org/0000-0002-9335-7468>)
 Maintainer: Teun van den Brand <tahvdbrand@gmail.com>
 Repository: CRAN
-Date/Publication: 2025-05-30 09:20:09 UTC
+Date/Publication: 2025-08-18 19:20:22 UTC
