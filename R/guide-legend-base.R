@@ -23,6 +23,49 @@
 #' @param reverse A `<logical[1]>` whether the order of keys should be inverted.
 #' @inheritParams common_parameters
 #'
+#' @details
+#' ## Styling options
+#'
+#' Below are the [theme][ggplot2::theme] options that determine the styling of
+#' this guide. Note that these are the same for [`ggplot2::guide_legend()`].
+#'
+#' | **Theme setting** | **Type** | **Description** |
+#' | ----------------- | -------- | --------------- |
+#' | `legend.background`| [`element_rect()`] | Background of the legend. |
+#' | `legend.margin` | [`margin()`] | Padding around the legend. |
+#' | `legend.text` | [`element_text()`] | Labels displayed next to keys. |
+#' | `legend.text.position` | `<character[1]>` | One of `"top"`, `"right"`, `"bottom"` or `"left"`. |
+#' | `legend.title` | [`element_text()`] | Title of the legend. |
+#' | `legend.title.position` | `<character[1]>` | One of `"top"`, `"right"`, `"bottom"` or `"left"`. |
+#' | `legend.key` | [`element_rect()`] | Background of the key areas. |
+#' | `legend.key.height` | [`unit()`] | Height of keys. |
+#' | `legend.key.width` | [`unit()`] | Width of keys. |
+#' | `legend.key.justification` | `<numeric[2]>` | Justification for placing legend keys in excess space. |
+#' | `legend.key.spacing.x` | [`unit()`] | Horizontal spacing between keys. |
+#' | `legend.key.spacing.y` | [`unit()`] | Vertical spacing between keys. Taken literally. |
+#' | `legend.byrow` | `<logical[1]>` | Row-order key filling (`TRUE`) or column-order (`FALSE`) |
+#'
+#' The context-agnostic alternative to using `theme()` is to use
+#' [`theme_guide()`]:
+#'
+#' ```r
+#' guide_legend_base(theme = theme_guide(
+#'   text = element_text(),
+#'   text.position = "right",
+#'   title = element_text(),
+#'   title.position = "top",
+#'   key = element_rect(),
+#'   key.height = unit(5, "mm"),
+#'   key.width = unit(5, "mm"),
+#'   key.justification = c(0.5, 0.5),
+#'   key.spacing.x = unit(5, "mm"),
+#'   key.spacing.y = unit(5, "mm"),
+#'   byrow = TRUE,
+#'   margin = margin(5),
+#'   background = element_rect(),
+#' ))
+#' ```
+#'
 #' @return A `<GuideLegend>` object.
 #' @export
 #' @family standalone guides
@@ -69,14 +112,14 @@ guide_legend_base <- function(
   override.aes = list(),
   position = NULL,
   direction = NULL,
-  order = 0
+  order = 0L
 ) {
 
   check_position(position, theta = FALSE, inside = TRUE, allow_null = TRUE)
   check_argmatch(direction, c("horizontal", "vertical"), allow_null = TRUE)
   check_bool(reverse)
-  check_number_whole(nrow, min = 1, allow_null = TRUE)
-  check_number_whole(ncol, min = 1, allow_null = TRUE)
+  check_number_whole(nrow, min = 1.0, allow_null = TRUE)
+  check_number_whole(ncol, min = 1.0, allow_null = TRUE)
 
   design <- validate_design(design, allow_null = TRUE)
   if (!is.null(design)) {
@@ -84,7 +127,7 @@ guide_legend_base <- function(
       if (!is.null(nrow)) "nrow",
       if (!is.null(ncol)) "ncol"
     )
-    if (length(ignored) > 0) {
+    if (length(ignored) > 0L) {
       cli::cli_warn(
         "The {.and {.arg {ignored}}} argument{?s} {?is/are} ignored \\
         when the {.arg design} argument is provided."
@@ -174,7 +217,7 @@ GuideLegendBase <- ggproto(
     decor <- render_legend_glyphs(
       index = seq_len(params$n_breaks),
       decor = decor, background = elements$key,
-      default_size = c(elements$width_cm, elements$height_cm) * 10
+      default_size = c(elements$width_cm, elements$height_cm) * 10.0
     )
     decor <- decor[params$key$.index]
     names(decor) <- paste("key", params$key$.row, params$key$.col, sep = "-")
@@ -196,7 +239,7 @@ GuideLegendBase <- ggproto(
       right = list(widths, label_widths),
       list(pmax(label_widths, widths))
     )
-    widths <- vec_interleave(!!!widths, elements$spacing_x %||% 0)
+    widths <- vec_interleave(!!!widths, elements$spacing_x %||% 0.0)
     widths <- widths[-length(widths)] # Remove last spacer
 
     # Get height of keys per row
@@ -212,7 +255,7 @@ GuideLegendBase <- ggproto(
       bottom = list(heights, label_heights),
       list(pmax(label_heights, heights))
     )
-    heights <- vec_interleave(!!!heights, elements$spacing_y %||% 0)
+    heights <- vec_interleave(!!!heights, elements$spacing_y %||% 0.0)
     heights <- heights[-length(heights)] # Remove last spacer
 
     list(widths = widths, heights = heights)
@@ -224,15 +267,15 @@ GuideLegendBase <- ggproto(
     col <- key$.col
 
     # Account for spacing in between keys
-    key_row <- row * 2 - 1
-    key_col <- col * 2 - 1
+    key_row <- row * 2L - 1L
+    key_col <- col * 2L - 1L
 
     # Resolve position of labels relative to keys
     position <- elements$text_position
-    key_row <- key_row + switch(position, top  = row, bottom = row - 1, 0)
-    lab_row <- key_row + switch(position, top  = -1,  bottom = 1,       0)
-    key_col <- key_col + switch(position, left = col, right  = col - 1, 0)
-    lab_col <- key_col + switch(position, left = -1,  right  = 1,       0)
+    key_row <- key_row + switch(position, top  = row, bottom = row - 1L, 0L)
+    lab_row <- key_row + switch(position, top  = -1L, bottom = 1L,       0L)
+    key_col <- key_col + switch(position, left = col, right  = col - 1L, 0L)
+    lab_col <- key_col + switch(position, left = -1L, right  = 1L,       0L)
 
     data_frame0(
       key_row = key_row,
@@ -253,11 +296,11 @@ render_legend_glyphs <- function(index, decor, background, default_size) {
         return(zeroGrob())
       }
       key <- dec$draw_key(data, dec$params, default_size)
-      set_key_size(key, data$linewidth, data$size, default_size / 10)
+      set_key_size(key, data$linewidth, data$size, default_size / 10.0)
     })
     gTree(
-      width    = max(map_dbl(glyphs, get_width_attr),  0,  na.rm = TRUE),
-      height   = max(map_dbl(glyphs, get_height_attr), 0,  na.rm = TRUE),
+      width    = max(map_dbl(glyphs, get_width_attr),  0.0,  na.rm = TRUE),
+      height   = max(map_dbl(glyphs, get_height_attr), 0.0,  na.rm = TRUE),
       children = inject(gList(background, !!!glyphs))
     )
   })
@@ -270,14 +313,14 @@ set_key_size <- function(key, lwd = NULL, size = NULL, default = NULL) {
     return(key)
   }
   if (!is.null(size) || !is.null(lwd)) {
-    size <- size[1] %||% 0 %|NA|% 0
-    lwd  <- lwd[1]  %||% 0 %|NA|% 0
-    size <- (size + lwd) / 10
+    size <- size[1L] %||% 0.0 %|NA|% 0.0
+    lwd  <- lwd[1L]  %||% 0.0 %|NA|% 0.0
+    size <- (size + lwd) / 10.0
   } else {
     size <- NULL
   }
-  attr(key, "width")  <- width  %||% size %||% default[1]
-  attr(key, "height") <- height %||% size %||% default[2]
+  attr(key, "width")  <- width  %||% size %||% default[1L]
+  attr(key, "height") <- height %||% size %||% default[2L]
   key
 }
 
@@ -291,9 +334,9 @@ apply_design <- function(
   if (is.null(design)) {
     if (is.null(nrow) && is.null(ncol)) {
       if (direction == "horizontal") {
-        nrow <- ceiling(n_breaks / 5)
+        nrow <- ceiling(n_breaks / 5.0)
       } else {
-        ncol <- ceiling(n_breaks / 20)
+        ncol <- ceiling(n_breaks / 20.0)
       }
     }
     nrow <- nrow %||% ceiling(n_breaks / ncol)
@@ -354,7 +397,7 @@ validate_design <- function(design = NULL, trim = TRUE, allow_null = TRUE) {
 
   if (trim) {
     filled <- !is.na(design)
-    design <- design[rowSums(filled) > 0, colSums(filled) > 0, drop = FALSE]
+    design <- design[rowSums(filled) > 0L, colSums(filled) > 0L, drop = FALSE]
   }
 
   if (!is.numeric(levels)) {
@@ -374,8 +417,8 @@ parse_design_character <- function(design, call = caller_env()) {
   check_string(design, allow_empty = FALSE, call = call)
 
   # Inspired by patchwork::as_areas()
-  design <- trimws(strsplit(design, "\n")[[1]])
-  design <- strsplit(design[nzchar(design)], "")
+  design <- trimws(strsplit(design, "\n", fixed = TRUE)[[1L]])
+  design <- strsplit(design[nzchar(design)], "", fixed = TRUE)
 
   nrow <- length(design)
   ncol <- lengths(design)
@@ -388,6 +431,6 @@ parse_design_character <- function(design, call = caller_env()) {
 
   matrix(
     unlist(design, FALSE, FALSE),
-    nrow = nrow, ncol = ncol[1], byrow = TRUE
+    nrow = nrow, ncol = ncol[1L], byrow = TRUE
   )
 }

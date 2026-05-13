@@ -12,7 +12,7 @@ compose_stack(
   side.titles = waiver(),
   angle = waiver(),
   theme = NULL,
-  order = 0,
+  order = 0L,
   drop = NULL,
   position = waiver(),
   available_aes = NULL
@@ -35,10 +35,13 @@ as a function or as a string.}
 among all guides that have \code{NULL} keys themselves. See more information
 in the linked topic.}
 
-\item{title}{A \verb{<character[1]>} or \verb{<expression[1]>} indicating the title of
-the guide. If \code{NULL}, the title is not shown. The default,
-\code{\link[ggplot2:waiver]{waiver()}}, takes the name of the scale object or
-the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.}
+\item{title}{One of the following to indicate the title of the guide:
+\itemize{
+\item A \verb{<character[1]>} or \verb{<expression[1]>} to set a custom title.
+\item \code{NULL} to not display any title.
+\item \code{\link[ggplot2:waiver]{waiver()}} (default) to take the name of the scale
+object or the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.
+}}
 
 \item{side.titles}{A \verb{<character>} giving labels for titles displayed on the
 side of the stack. Set to \code{NULL} to display no side titles. If \code{waiver()},
@@ -46,7 +49,7 @@ an attempt is made to extract the titles from the guides and use these
 as side titles.}
 
 \item{angle}{A specification for the text angle. Compared to setting the \code{angle} argument
-in \code{\link[ggplot2:element]{element_text()}}, this argument uses some
+in \code{\link[ggplot2:element_text]{element_text()}}, this argument uses some
 heuristics to automatically pick the \code{hjust} and \code{vjust} that you
 probably want. Can be one of the following:
 \itemize{
@@ -79,9 +82,32 @@ the guides.}
 A \verb{<ComposeStack>} guide object.
 }
 \description{
-\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#experimental}{\figure{lifecycle-experimental.svg}{options: alt='[Experimental]'}}}{\strong{[Experimental]}}
-
 This guide can stack other guides.
+}
+\details{
+\subsection{Styling options}{
+
+Below are the \link[ggplot2:theme]{theme} options that determine the styling of
+this guide.\tabular{lll}{
+   \strong{Theme setting} \tab \strong{Type} \tab \strong{Description} \cr
+   \code{legendry.axis.subtitle} \tab \code{\link[ggplot2:element_text]{element_text()}} \tab Display of the \code{side.titles} argument's labels. \cr
+   \code{legendry.axis.subtitle.position} \tab \verb{<character[1]>} \tab One of \code{"top"}, \code{"right"}, \code{"bottom"} or \code{"left"}. \cr
+   \code{legendry.guide.spacing} \tab \code{\link[=unit]{unit()}} \tab Spacing between guides. \cr
+}
+
+
+There are no further styling options.
+
+The context-agnostic alternative to using \code{theme()} is to use
+\code{\link[=theme_guide]{theme_guide()}}:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{compose_stack(theme = theme_guide(
+  subtitle = element_text(),
+  subtitle.position = "left",
+  guide.spacing = unit(5, "mm")
+))
+}\if{html}{\out{</div>}}
+}
 }
 \examples{
 ggplot() +
@@ -94,10 +120,10 @@ ggplot() +
   theme(plot.margin = margin(5.5, 5.5, 5.5, 11))
 }
 \seealso{
-Other composition: 
-\code{\link{compose_crux}()},
-\code{\link{compose_ontop}()},
-\code{\link{compose_sandwich}()},
+Other composition:
+\code{\link[=compose_crux]{compose_crux()}},
+\code{\link[=compose_ontop]{compose_ontop()}},
+\code{\link[=compose_sandwich]{compose_sandwich()}},
 \code{\link{guide-composition}}
 }
 \concept{composition}

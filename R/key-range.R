@@ -11,6 +11,8 @@
 #'   to infer ranges from the scale's labels.
 #' * `key_range_manual()` uses user-provided vectors to set ranges.
 #' * `key_range_map()` makes mappings from a `<data.frame>` to set ranges.
+#' * `key_range_rle()` uses run-length encoding to determine the start and
+#'   end of runs (blocks of repeated data values).
 #'
 #' @param sep A `<character[1]>` giving a [regular expression][base::regex] to
 #'   use for splitting labels provided by the scale using
@@ -29,13 +31,21 @@
 #' @param data A `<data.frame>` or similar object coerced by
 #'   [`fortify()`][ggplot2::fortify] to a `<data.frame>`, in which the `mapping`
 #'   argument is evaluated.
-#' @param ... [`<data-masking>`][rlang::topic-data-mask] A set of mappings
-#'   similar to those provided to [`aes()`][ggplot2::aes], which will be
-#'   evaluated in the `data` argument.
-#'   For `key_range_map()`, these *must* contain `start` and `end` mappings.
-#'   Can contain additional parameters for text styling, namely `colour`,
-#'   `family`, `face`, `size`, `hjust`, `vjust`, `angle` and `lineheight`.
-#' @param .call A [call][rlang::topic-error-call] to display in messages.
+#' @param ...
+#' The `...` parameter has two purposes.
+#' 1. In `key_range_map()` it is [`<data-masking>`][rlang::topic-data-mask].
+#'   A set of mappings similar to those provided to [`aes()`][ggplot2::aes],
+#'   which will be evaluated in the `data` argument. These *must* contain
+#'   `start` and `end` mappings.
+#' 2. In other keys, `...` can be used to transfer graphical properties to the
+#'   individual ranges of a guide. For example, using `colour = "blue"` will
+#'   draw parts of the guides associated with ranges in blue. There is a shallow
+#'   hierarchy in that `text_colour`, `line_colour`, `rect_colour` and
+#'   `point_colour` are the specific properties for elements, but all inherit
+#'   from the main `colour` setting. Likewise, `size`, `linewidth`, `linetype`
+#'   and `fill` have specific variants for elements.
+#' @param x A `<vector[n]>` for which to determine run-starts and run-ends.
+#' @param call A [call][rlang::topic-error-call] to display in messages.
 #'
 #' @details
 #' The `level` variable is optional and when missing, the guides use an
@@ -75,6 +85,9 @@
 #'
 #' # Values from a <data.frame>
 #' key_range_map(presidential, start = start, end = end, name = name)
+#'
+#' # Values from run length encoding
+#' key_range_rle(c("AB", "AB", "C", "DEF", "DEF", "DEF"))
 NULL
 
 #' @rdname key_range
@@ -99,10 +112,11 @@ key_range_auto <- function(sep = "[^[:alnum:]]+", reverse = FALSE, ...) {
 
 #' @rdname key_range
 #' @export
-key_range_manual <- function(start, end, name = NULL, level = NULL, ...) {
+key_range_manual <- function(start, end, name = NULL, level = NULL, ..., call = NULL) {
   df <- data_frame0(
     start = start, end = end, .label = name, .level = level,
-    !!!extra_args(...)
+    !!!extra_args(...),
+    .error_call = call %||% current_call()
   )
   check_columns(df, c("start", "end"))
   class(df) <- c("key_range", "key_guide", class(df))
@@ -111,36 +125,44 @@ key_range_manual <- function(start, end, name = NULL, level = NULL, ...) {
 
 #' @rdname key_range
 #' @export
-key_range_map <- function(data, ..., .call = caller_env()) {
+key_range_map <- function(data, ..., call = NULL) {
   mapping <- aes(!!!enquos(...))
 
   df <- eval_aes(
     data, mapping,
     required = c("start", "end"),
-    optional = c("name", "level", .label_params),
-    call = .call, arg_mapping = "mapping", arg_data = "data"
+    optional = c("name", "level", .element_params),
+    call = call %||% current_call(),
+    arg_mapping = "mapping", arg_data = "data"
   )
 
   df <- rename(
-    df, c("name", "level", .label_params),
-    c(".label", ".level", paste0(".", .label_params))
+    df, c("name", "level", .element_params),
+    c(".label", ".level", paste0(".", .element_params))
   )
   class(df) <- c("key_range", "key_guide", class(df))
   df
 }
 
-key_range_rle <- function(x, ...) {
-  rle <- vec_unrep(x)
-  end <- cumsum(rle$times) + 0.5
-  start <- end - rle$times
-  key_range_manual(start, end, name = rle$key, level = 1L, ...)
+#' @rdname key_range
+#' @export
+key_range_rle <- function(x, ..., call = NULL) {
+  rle <- new_rle(x)
+  key_range_manual(
+    start = as_mapped_discrete(rle$start),
+    end   = as_mapped_discrete(rle$end),
+    name  = rle$key,
+    level = 1L,
+    ...,
+    call = call %||% current_call()
+  )
 }
 
 # Extractor ---------------------------------------------------------------
 
 range_extract_key <- function(
   scale, aesthetic, key,
-  drop_zero = TRUE, pad_discrete = 0,  oob = "squish",
+  drop_zero = TRUE, pad_discrete = 0.0,  oob = "squish",
   ...
 ) {
   if (is.function(key)) {
@@ -151,8 +173,8 @@ range_extract_key <- function(
   }
 
   # Mark discrete variables separately for start and end
-  disc_start <- -1 * is_discrete(key$start)
-  disc_end   <- +1 * is_discrete(key$end)
+  pad_start <- -1.0 * is_discrete(key$start) * pad_discrete
+  pad_end   <- +1.0 * is_discrete(key$end)   * pad_discrete
 
   map <- aesthetic %in% c("x", "y")
   key$start <- scale_transform(key$start, scale, map = map, "start")
@@ -174,13 +196,13 @@ range_extract_key <- function(
   if (!isFALSE(drop_zero)) {
     key$.draw <- abs(key$end - key$start) > sqrt(.Machine$double.eps)
   }
-  key$.draw <- key$.draw & key$.level > 0
+  key$.draw <- key$.draw & key$.level > 0L
 
   # Apply padding for discrete variables
   extend <- pad_discrete
   if (scale$is_discrete() && !is.null(extend)) {
-    key$start <- key$start + extend * disc_start
-    key$end   <- key$end   + extend * disc_end
+    key$start <- key$start + pad_start
+    key$end   <- key$end   + pad_end
   }
 
   # Apply out-of-bounds rules
@@ -196,8 +218,8 @@ range_oob <- function(ranges, method, limits) {
   limits <- sort(limits)
   ranges <- switch(
     method,
-    "squish" = range_squish(ranges, limits),
-    "censor" = range_censor(ranges, limits),
+    squish = range_squish(ranges, limits),
+    censor = range_censor(ranges, limits),
     ranges
   )
   vec_slice(ranges, !is.na(ranges$.draw))
@@ -208,10 +230,10 @@ range_squish <- function(ranges, limits) {
   end    <- ranges$end
   oob_start <- is_oob(start, limits)
   oob_end   <- is_oob(end,   limits)
-  keep <- !oob_start | !oob_end | (start < limits[1] & end > limits[2])
+  keep <- !oob_start | !oob_end | (start < limits[1L] & end > limits[2L])
   ranges$.draw[!keep] <- NA
-  ranges$start <- pmin(pmax(ranges$start, limits[1]), limits[2])
-  ranges$end   <- pmin(pmax(ranges$end,   limits[1]), limits[2])
+  ranges$start <- pmin(pmax(ranges$start, limits[1L]), limits[2L])
+  ranges$end   <- pmin(pmax(ranges$end,   limits[1L]), limits[2L])
   ranges
 }
 
@@ -230,7 +252,7 @@ range_from_label <- function(
   extra_args = list(), call = caller_env()
 ) {
   # Extract a standard key from the scale
-  aesthetic <- aesthetic %||% scale$aesthetics[1]
+  aesthetic <- aesthetic %||% scale$aesthetics[1L]
   key <- Guide$extract_key(scale, aesthetic)
 
   # Reject expressions, as we cannot split these
@@ -263,18 +285,18 @@ range_from_label <- function(
     labels <- labels[, rev(seq_len(ncol(labels)))]
   }
 
-  key$.label <- labels[, 1, drop = TRUE]
-  labels <- labels[, -1, drop = FALSE]
+  key$.label <- labels[, 1L, drop = TRUE]
+  labels <- labels[, -1L, drop = FALSE]
 
   # Set first series of unbracketed labels
-  value  <- key[[1]]
+  value  <- key[[1L]]
   key <- data_frame0(
-    start = value, end = value, .label = key$.label, .level = 0
+    start = value, end = value, .label = key$.label, .level = 0L
   )
   if (is_empty(labels)) {
     return(data_frame0(key, !!!extra_args))
   }
-  ranges <- apply(labels, 2, function(labs) {
+  ranges <- apply(labels, 2L, function(labs) {
     rle   <- vec_unrep(labs)
     start <- cumsum(rle$times) - rle$times + 1L
     data_frame0(
@@ -300,12 +322,12 @@ justify_ranges <- function(key, levels, element, level_elements) {
   }
 
   ends <- intersect(c("thetaend", "xend", "yend"), names(key))
-  if (length(ends) < 1) {
+  if (length(ends) < 1L) {
     return(key)
   }
-  starts <- gsub("end$", "", ends[1])
+  starts <- gsub("end$", "", ends[1L])
 
-  just_name <- switch(ends[1], yend = "vjust", "hjust")
+  just_name <- switch(ends[1L], yend = "vjust", "hjust")
   just <- element[[just_name]] %||% 0.5
 
   if (!is.null(level_elements)) {
@@ -314,7 +336,7 @@ justify_ranges <- function(key, levels, element, level_elements) {
   }
 
   key[[starts]] <- switch(
-    ends[1],
+    ends[1L],
     thetaend = justify_range(key$theta, key$thetaend, just, theta = TRUE),
     xend     = justify_range(key$x, key$xend, just),
     yend     = justify_range(key$y, key$yend, just)
@@ -326,7 +348,7 @@ justify_ranges <- function(key, levels, element, level_elements) {
 justify_range <- function(start, end, just, theta = FALSE) {
   if (theta) {
     add <- end < start
-    end[add] <- end[add] + 2 * pi
+    end[add] <- end[add] + 2.0 * pi
   }
   (end - start) * just + start
 }
@@ -334,7 +356,7 @@ justify_range <- function(start, end, just, theta = FALSE) {
 disjoin_ranges <- function(ranges) {
 
   n_ranges <- nrow(ranges)
-  if (n_ranges < 2) {
+  if (n_ranges < 2L) {
     ranges$.level <- rep(1L, nrow(ranges))
     return(ranges)
   }
@@ -346,16 +368,16 @@ disjoin_ranges <- function(ranges) {
   ends   <- ranges$end
 
   # Initialise first range
-  end_tracker <- ends[1]
+  end_tracker <- ends[1L]
   bin <- rep(NA_integer_, nrow(ranges))
-  bin[1] <- 1L
+  bin[1L] <- 1L
 
   # Find bins
-  for (range_id in seq_len(n_ranges)[-1]) {
+  for (range_id in seq_len(n_ranges)[-1L]) {
     candidate <- which(end_tracker < starts[range_id])
-    if (length(candidate) > 0) {
+    if (length(candidate) > 0L) {
       # If there is room in this bin, update this bin
-      ans <- candidate[1]
+      ans <- candidate[1L]
       end_tracker[ans] <- ends[range_id]
     } else {
       # Register new bin
@@ -390,9 +412,8 @@ setup_range_params <- function(params) {
     return(params)
   }
 
-  limits   <- params$limits %||% c(0, 1)
-  other    <- switch(params$position, bottom = , left = 1, 0)
-  position <- params$position
+  limits   <- params$limits %||% c(0.0, 1.0)
+  other    <- switch(params$position, bottom = , left = 1L, 0L)
 
   if (!is_empty(params$key)) {
     key <- params$key

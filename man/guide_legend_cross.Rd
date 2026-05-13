@@ -7,14 +7,17 @@
 guide_legend_cross(
   key = NULL,
   title = waiver(),
+  row_title = waiver(),
+  col_title = waiver(),
   swap = FALSE,
   col_text = element_text(angle = 90, vjust = 0.5),
+  subtitle_position = position_text(angle = c(0, -90, 0, 90), hjust = 0.5),
   override.aes = list(),
   reverse = FALSE,
   theme = NULL,
   position = NULL,
   direction = NULL,
-  order = 0
+  order = 0L
 )
 }
 \arguments{
@@ -26,10 +29,22 @@ display a compound variable like \code{paste(var1, var2)}.
 crossing two separate variables across two scales.
 }}
 
-\item{title}{A \verb{<character[1]>} or \verb{<expression[1]>} indicating the title of
-the guide. If \code{NULL}, the title is not shown. The default,
-\code{\link[ggplot2:waiver]{waiver()}}, takes the name of the scale object or
-the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.}
+\item{title}{One of the following to indicate the title of the guide:
+\itemize{
+\item A \verb{<character[1]>} or \verb{<expression[1]>} to set a custom title.
+\item \code{NULL} to not display any title.
+\item \code{\link[ggplot2:waiver]{waiver()}} (default) to take the name of the scale
+object or the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.
+}}
+
+\item{row_title, col_title}{One of the following to indicate subtitles
+spanning the rows and columns of the guide:
+\itemize{
+\item A \verb{<character[1]>} or \verb{<expression[1]>} to set a custom title.
+\item \code{NULL} to not display any title.
+\item \code{\link[ggplot2:waiver]{waiver()}} to propagate subtitles from
+merging guides (default).
+}}
 
 \item{swap}{A \verb{<logical[1]>} which when \code{TRUE} exchanges the column and row
 variables in the displayed legend.}
@@ -37,6 +52,12 @@ variables in the displayed legend.}
 \item{col_text}{An \verb{<element_text>} object giving adjustments to text for
 the column labels. Can be \code{NULL} to display column labels in equal fashion
 to the row labels.}
+
+\item{subtitle_position}{A named list of 4
+\link[ggplot2:element_text]{text elements}, having the names \code{"top"},
+\code{"right"}, \code{"bottom"} and \verb{"left}. These govern the display of subtitles
+when placed in any of these positions relative to the keys. See
+\code{\link[=position_text]{position_text()}} for a convenient helper.}
 
 \item{override.aes}{A named \verb{<list>} specifying aesthetic parameters of the
 key glyphs. See details and examples in
@@ -67,6 +88,48 @@ A \verb{<GuideLegend>} object.
 \description{
 This is a legend type similar to \code{\link[ggplot2:guide_legend]{guide_legend()}}
 that displays crosses, or: interactions, between two variables.
+}
+\details{
+\subsection{Styling options}{
+
+Below are the \link[ggplot2:theme]{theme} options that determine the styling of
+this guide. Note that these are almost the same for
+\code{\link[ggplot2:guide_legend]{ggplot2::guide_legend()}}.\tabular{lll}{
+   \strong{Theme setting} \tab \strong{Type} \tab \strong{Description} \cr
+   \code{legend.background} \tab \code{\link[ggplot2:element_rect]{element_rect()}} \tab Background of the legend. \cr
+   \code{legend.margin} \tab \code{\link[ggplot2:margin]{margin()}} \tab Padding around the legend. \cr
+   \code{legend.text} \tab \code{\link[ggplot2:element_text]{element_text()}} \tab Labels displayed next to keys. \cr
+   \code{legend.text.position} \tab \verb{<character[1]>} \tab One of \code{"top"}, \code{"right"}, \code{"bottom"} or \code{"left"}. \cr
+   \code{legend.title} \tab \code{\link[ggplot2:element_text]{element_text()}} \tab Title of the legend. \cr
+   \code{legend.title.position} \tab \verb{<character[1]>} \tab One of \code{"top"}, \code{"right"}, \code{"bottom"} or \code{"left"}. \cr
+   \code{legend.key} \tab \code{\link[ggplot2:element_rect]{element_rect()}} \tab Background of the key areas. \cr
+   \code{legend.key.height} \tab \code{\link[=unit]{unit()}} \tab Height of keys. \cr
+   \code{legend.key.width} \tab \code{\link[=unit]{unit()}} \tab Width of keys. \cr
+   \code{legend.key.justification} \tab \verb{<numeric[2]>} \tab Justification for placing legend keys in excess space. \cr
+   \code{legend.key.spacing.x} \tab \code{\link[=unit]{unit()}} \tab Horizontal spacing between keys. \cr
+   \code{legend.key.spacing.y} \tab \code{\link[=unit]{unit()}} \tab Vertical spacing between keys. Taken literally. \cr
+}
+
+
+The context-agnostic alternative to using \code{theme()} is to use
+\code{\link[=theme_guide]{theme_guide()}}:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{guide_legend_cross(theme = theme_guide(
+  text = element_text(),
+  text.position = "right",
+  title = element_text(),
+  title.position = "top",
+  key = element_rect(),
+  key.height = unit(5, "mm"),
+  key.width = unit(5, "mm"),
+  key.justification = c(0.5, 0.5),
+  key.spacing.x = unit(5, "mm"),
+  key.spacing.y = unit(5, "mm"),
+  margin = margin(5),
+  background = element_rect(),
+))
+}\if{html}{\out{</div>}}
+}
 }
 \examples{
 # Standard use for single aesthetic. The default is to split labels to
@@ -105,20 +168,25 @@ ggplot(mpg, aes(displ, hwy)) +
   )
 }
 \seealso{
-Other standalone guides: 
-\code{\link{guide_axis_base}()},
-\code{\link{guide_axis_dendro}()},
-\code{\link{guide_axis_nested}()},
-\code{\link{guide_circles}()},
-\code{\link{guide_colbar}()},
-\code{\link{guide_colring}()},
-\code{\link{guide_colsteps}()},
-\code{\link{guide_legend_base}()},
-\code{\link{guide_legend_group}()}
+Other standalone guides:
+\code{\link[=guide_axis_annotation]{guide_axis_annotation()}},
+\code{\link[=guide_axis_base]{guide_axis_base()}},
+\code{\link[=guide_axis_dendro]{guide_axis_dendro()}},
+\code{\link[=guide_axis_nested]{guide_axis_nested()}},
+\code{\link[=guide_axis_plot]{guide_axis_plot()}},
+\code{\link[=guide_axis_symbols]{guide_axis_symbols()}},
+\code{\link[=guide_circles]{guide_circles()}},
+\code{\link[=guide_colbar]{guide_colbar()}},
+\code{\link[=guide_colring]{guide_colring()}},
+\code{\link[=guide_colsteps]{guide_colsteps()}},
+\code{\link[=guide_legend_base]{guide_legend_base()}},
+\code{\link[=guide_legend_group]{guide_legend_group()}},
+\code{\link[=guide_legend_manual]{guide_legend_manual()}}
 
-Other legend guides: 
-\code{\link{guide_legend_base}()},
-\code{\link{guide_legend_group}()}
+Other legend guides:
+\code{\link[=guide_legend_base]{guide_legend_base()}},
+\code{\link[=guide_legend_group]{guide_legend_group()}},
+\code{\link[=guide_legend_manual]{guide_legend_manual()}}
 }
 \concept{legend guides}
 \concept{standalone guides}

@@ -100,7 +100,7 @@ group_from_split_label <- function(scale, aesthetic, sep = "[^[:alnum:]]+",
                                    reverse = FALSE, call = caller_env()) {
 
   # Extract a standard key from the scale
-  aesthetic <- aesthetic %||% scale$aesthetics[1]
+  aesthetic <- aesthetic %||% scale$aesthetics[1L]
   key <- Guide$extract_key(scale, aesthetic)
 
   # Reject expressions, as we cannot split these
@@ -125,16 +125,15 @@ group_from_split_label <- function(scale, aesthetic, sep = "[^[:alnum:]]+",
   labels <- lapply(Map(vec_slice, i = -i, x = labels), paste0, collapse = " ")
   labels <- vec_c(!!!labels)
 
-  key$.label <- labels
+  key$.label <- factor(labels, unique0(labels))
   key$.group <- factor(groups, unique0(groups))
-  vec_slice(key, order(key$.group))
-
+  vec_slice(key, order(key$.group, key$.label))
 }
 
 group_from_lut <- function(scale, aesthetic, lut, ungrouped = "Other") {
 
   # Extract a standard key from the scale
-  aesthetic <- aesthetic %||% scale$aesthetics[1]
+  aesthetic <- aesthetic %||% scale$aesthetics[1L]
   key <- Guide$extract_key(scale, aesthetic)
 
   group <- lut$key[match_list(key$.value, lut$val)] %|NA|% ungrouped

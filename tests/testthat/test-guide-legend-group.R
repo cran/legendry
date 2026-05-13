@@ -1,12 +1,30 @@
+test_that("guide_legend_group can merge two legends", {
+
+  df <- data.frame(x = 1L:3L, f = c("A,a", "A,b", "Z,x"))
+  p <- ggplot(df, aes(x, x, color = f, shape = f)) +
+    geom_point() +
+    guides(
+      color = "legend_group",
+      shape = "legend_group"
+    )
+  gd <- get_guide_data(p, "color")
+  expect_in(
+    c("colour", "shape", ".group"),
+    names(gd)
+  )
+  expect_identical(nrow(gd), 3L)
+  expect_identical(gd$.group, factor(c("A", "A", "Z"), levels = c("A", "Z")))
+})
+
 test_that("guide_legend_group works in both direction with all subtitles", {
 
-  df <- msleep[c(9, 28, 11, 5, 34, 54, 24, 53), ]
+  df <- msleep[c(9L, 28L, 11L, 5L, 34L, 54L, 24L, 53L), ]
 
   base <- ggplot(df, aes(bodywt, awake)) +
     geom_point(aes(colour = paste0(order, ".", name))) +
     scale_colour_discrete(
       name = "Animals",
-      guide = guide_legend_group(ncol = 2)
+      guide = guide_legend_group(ncol = 2L)
     ) +
     theme_test() +
     theme(
@@ -59,7 +77,7 @@ test_that("guide_legend_group works in both direction with all subtitles", {
     base + theme(
       legend.position = "bottom",
       legendry.legend.subtitle.position = "left",
-      legendry.legend.subtitle = element_text(angle = 90, hjust = 1)
+      legendry.legend.subtitle = element_text(angle = 90.0, hjust = 1.0)
     )
   )
 
@@ -68,7 +86,7 @@ test_that("guide_legend_group works in both direction with all subtitles", {
     base + theme(
       legend.position = "bottom",
       legendry.legend.subtitle.position = "right",
-      legendry.legend.subtitle = element_text(angle = 270)
+      legendry.legend.subtitle = element_text(angle = 270.0)
     )
   )
 

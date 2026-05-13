@@ -12,7 +12,7 @@ guide_circles(
   vjust = 0,
   text_position = NULL,
   clip_text = FALSE,
-  override.aes = list(shape = 1),
+  override.aes = list(shape = 1L),
   position = waiver(),
   direction = NULL
 )
@@ -21,10 +21,13 @@ guide_circles(
 \item{key}{A \link[=key_standard]{standard key} specification. Defaults to
 \code{\link[=key_auto]{key_auto()}}. See more information in the linked topic.}
 
-\item{title}{A \verb{<character[1]>} or \verb{<expression[1]>} indicating the title of
-the guide. If \code{NULL}, the title is not shown. The default,
-\code{\link[ggplot2:waiver]{waiver()}}, takes the name of the scale object or
-the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.}
+\item{title}{One of the following to indicate the title of the guide:
+\itemize{
+\item A \verb{<character[1]>} or \verb{<expression[1]>} to set a custom title.
+\item \code{NULL} to not display any title.
+\item \code{\link[ggplot2:waiver]{waiver()}} (default) to take the name of the scale
+object or the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.
+}}
 
 \item{theme}{A \code{\link[ggplot2:theme]{<theme>}} object to style the guide individually or
 differently from the plot's theme settings. The \code{theme} argument in the
@@ -58,7 +61,7 @@ A \verb{<GuideCircles>} object.
 \description{
 This guide displays the sizes of points as a series of circles. It is
 typically paired with \code{\link[ggplot2:geom_point]{geom_point()}} with
-\code{\link[ggplot2:draw_key]{draw_key_point()}} glyphs.
+\code{\link[ggplot2:draw_key_point]{draw_key_point()}} glyphs.
 }
 \details{
 Please note that the default size scales scale to area, not radius, so
@@ -69,6 +72,40 @@ This graph was designed with standard round \link[ggplot2:scale_shape]{shapes}
 in mind, i.e. shapes 1, 16, 19 and 21. For that reason, \code{shape = 1} is the
 default \code{override.aes} argument. Other shapes will probably be drawn but the
 quality of their alignment and label placement may be unsatisfactory.
+\subsection{Styling options}{
+
+Below are the \link[ggplot2:theme]{theme} options that determine the styling of
+this guide.\tabular{lll}{
+   \strong{Theme setting} \tab \strong{Type} \tab \strong{Description} \cr
+   \code{legend.background} \tab \code{\link[ggplot2:element_rect]{element_rect()}} \tab Background of the legend. \cr
+   \code{legend.margin} \tab \code{\link[ggplot2:margin]{margin()}} \tab Padding around the legend. \cr
+   \code{legend.key} \tab \code{\link[ggplot2:element_rect]{element_rect()}} \tab Background of the key area underneath circles. \cr
+   \code{legend.text} \tab \code{\link[ggplot2:element_text]{element_text()}} \tab Labels displayed next to tick marks or on top of circles. \cr
+   \code{legendry.legend.key.margin} \tab \code{\link[ggplot2:margin]{margin()}} \tab Padding between circles and edge of key area. \cr
+   \code{legend.ticks} \tab \code{\link[ggplot2:element_line]{element_line()}} \tab Tick marks connecting circle to label. \cr
+   \code{legend.title} \tab \code{\link[ggplot2:element_text]{element_text()}} \tab Title of the legend. \cr
+   \code{legend.title.position} \tab \verb{<character[1]>} \tab One of \code{"top"}, \code{"right"}, \code{"bottom"} or \code{"left"}. \cr
+}
+
+
+Styling options \emph{per break} can be set in the \link[=key_standard]{standard key}.
+These override theme settings.
+
+The context-agnostic alternative to using \code{theme()} is to use
+\code{\link[=theme_guide]{theme_guide()}}:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{guide_circles(theme = theme_guide(
+  text = element_text(),
+  title = element_text(),
+  title.position = "top",
+  margin = margin(5),
+  key = element_rect(),
+  key.margin = margin(5),
+  background = element_rect(),
+  ticks = element_line(),
+))
+}\if{html}{\out{</div>}}
+}
 }
 \examples{
 # A standard plot
@@ -110,15 +147,19 @@ p + guides(size = guide_circles(override.aes = aes(colour = "red")))+
   )
 }
 \seealso{
-Other standalone guides: 
-\code{\link{guide_axis_base}()},
-\code{\link{guide_axis_dendro}()},
-\code{\link{guide_axis_nested}()},
-\code{\link{guide_colbar}()},
-\code{\link{guide_colring}()},
-\code{\link{guide_colsteps}()},
-\code{\link{guide_legend_base}()},
-\code{\link{guide_legend_cross}()},
-\code{\link{guide_legend_group}()}
+Other standalone guides:
+\code{\link[=guide_axis_annotation]{guide_axis_annotation()}},
+\code{\link[=guide_axis_base]{guide_axis_base()}},
+\code{\link[=guide_axis_dendro]{guide_axis_dendro()}},
+\code{\link[=guide_axis_nested]{guide_axis_nested()}},
+\code{\link[=guide_axis_plot]{guide_axis_plot()}},
+\code{\link[=guide_axis_symbols]{guide_axis_symbols()}},
+\code{\link[=guide_colbar]{guide_colbar()}},
+\code{\link[=guide_colring]{guide_colring()}},
+\code{\link[=guide_colsteps]{guide_colsteps()}},
+\code{\link[=guide_legend_base]{guide_legend_base()}},
+\code{\link[=guide_legend_cross]{guide_legend_cross()}},
+\code{\link[=guide_legend_group]{guide_legend_group()}},
+\code{\link[=guide_legend_manual]{guide_legend_manual()}}
 }
 \concept{standalone guides}

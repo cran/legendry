@@ -7,13 +7,14 @@
 guide_axis_base(
   key = NULL,
   title = waiver(),
+  subtitle = NULL,
   theme = NULL,
-  n.dodge = 1,
+  n.dodge = 1L,
   check.overlap = FALSE,
   angle = waiver(),
   cap = "none",
   bidi = FALSE,
-  order = 0,
+  order = 0L,
   position = waiver()
 )
 }
@@ -22,10 +23,16 @@ guide_axis_base(
 \code{\link[=key_auto]{key_auto()}}. See more information in the linked topic and the 'Details'
 section.}
 
-\item{title}{A \verb{<character[1]>} or \verb{<expression[1]>} indicating the title of
-the guide. If \code{NULL}, the title is not shown. The default,
-\code{\link[ggplot2:waiver]{waiver()}}, takes the name of the scale object or
-the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.}
+\item{title}{One of the following to indicate the title of the guide:
+\itemize{
+\item A \verb{<character[1]>} or \verb{<expression[1]>} to set a custom title.
+\item \code{NULL} to not display any title.
+\item \code{\link[ggplot2:waiver]{waiver()}} (default) to take the name of the scale
+object or the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.
+}}
+
+\item{subtitle}{Passed on to \code{\link[=primitive_title]{primitive_title(title)}}.
+Follow the linked topic for more details.}
 
 \item{theme}{A \code{\link[ggplot2:theme]{<theme>}} object to style the guide individually or
 differently from the plot's theme settings. The \code{theme} argument in the
@@ -39,7 +46,7 @@ omit overlapping text. If \code{TRUE}, first, last and middle labels are
 recursively prioritised in that order. If \code{FALSE}, all labels are drawn.}
 
 \item{angle}{A specification for the text angle. Compared to setting the \code{angle} argument
-in \code{\link[ggplot2:element]{element_text()}}, this argument uses some
+in \code{\link[ggplot2:element_text]{element_text()}}, this argument uses some
 heuristics to automatically pick the \code{hjust} and \code{vjust} that you
 probably want. Can be one of the following:
 \itemize{
@@ -97,6 +104,40 @@ To set minor ticks, use \code{key = "minor"}, or use the \code{type} argument in
 \code{key_manual()} or \code{key_map()}.
 
 To use this as a logarithmic axis, set \code{key = "log"}.
+\subsection{Styling options}{
+
+Because this guide is pure composite guide, the \link[ggplot2:theme]{theme}
+options that govern the styling are determined by its constituents. They are
+linked below so you can find their 'Styling options' sections.\tabular{ll}{
+   \strong{Primitive} \tab \strong{Description} \cr
+   \code{\link{compose_stack}} \tab Stacks the lines, tick marks and labels. \cr
+   \code{\link[=primitive_line]{primitive_line()}} \tab Makes up the axis line. \cr
+   \code{\link[=primitive_ticks]{primitive_ticks()}} \tab Makes up the tick marks. \cr
+   \code{\link[=primitive_labels]{primitive_labels()}} \tab Makes up the labels. \cr
+}
+
+
+Styling options \emph{per break} can be set in the \link[=key_standard]{standard key}.
+These override theme settings.
+
+The context-agnostic alternative to using \code{theme()} is to use
+\code{\link[=theme_guide]{theme_guide()}}:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{guide_axis_base(theme = theme_guide(
+  # Common options
+  line = element_line(),
+  text = element_text(),
+  ticks = element_line(),
+  ticks.length = unit(5, "mm"),
+
+  # Niche options below
+  minor.ticks = element_line(),
+  minor.ticks.length = unit(5, "mm"),
+  mini.ticks = element_line(),
+  mini.ticks.length = unit(5, "mm"),
+))
+}\if{html}{\out{</div>}}
+}
 }
 \examples{
 # A standard plot with custom keys
@@ -122,15 +163,19 @@ ggplot(msleep, aes(bodywt, brainwt)) +
   )
 }
 \seealso{
-Other standalone guides: 
-\code{\link{guide_axis_dendro}()},
-\code{\link{guide_axis_nested}()},
-\code{\link{guide_circles}()},
-\code{\link{guide_colbar}()},
-\code{\link{guide_colring}()},
-\code{\link{guide_colsteps}()},
-\code{\link{guide_legend_base}()},
-\code{\link{guide_legend_cross}()},
-\code{\link{guide_legend_group}()}
+Other standalone guides:
+\code{\link[=guide_axis_annotation]{guide_axis_annotation()}},
+\code{\link[=guide_axis_dendro]{guide_axis_dendro()}},
+\code{\link[=guide_axis_nested]{guide_axis_nested()}},
+\code{\link[=guide_axis_plot]{guide_axis_plot()}},
+\code{\link[=guide_axis_symbols]{guide_axis_symbols()}},
+\code{\link[=guide_circles]{guide_circles()}},
+\code{\link[=guide_colbar]{guide_colbar()}},
+\code{\link[=guide_colring]{guide_colring()}},
+\code{\link[=guide_colsteps]{guide_colsteps()}},
+\code{\link[=guide_legend_base]{guide_legend_base()}},
+\code{\link[=guide_legend_cross]{guide_legend_cross()}},
+\code{\link[=guide_legend_group]{guide_legend_group()}},
+\code{\link[=guide_legend_manual]{guide_legend_manual()}}
 }
 \concept{standalone guides}

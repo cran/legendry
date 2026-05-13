@@ -29,6 +29,33 @@
 #' Non-finite values such as `NA` and `NaN` are ignored while infinite values
 #' such as `-Inf` and `Inf` are [squished][scales::oob_squish] to the limits.
 #'
+#' ## Styling options
+#'
+#' Below are the [theme][ggplot2::theme] options that determine the styling of
+#' this guide.
+#'
+#' | **Theme setting** | **Type** | **Description** |
+#' | ----------------- | -------- | --------------- |
+#' | `legend.frame` | [`element_rect()`] | Outline drawn around the density itself. The `fill` setting is ignored. |
+#' | `legend.key` | [`element_rect()`] | Background underneath the density area. |
+#' | `legend.key.width` | [`unit()`] | Width of the density area. |
+#' | `legend.key.height` | [`unit()`] | Height of the density area. |
+#'
+#' Please note that depending on the `direction` argument, the
+#' `legend.key.width`/`legend.key.height` setting are expanded 5-fold if
+#' originating from the global theme. To set these directly, you can use the
+#' local `theme` argument in the guide.
+#' These settings have shorthands in [`theme_guide()`]:
+#'
+#' ```r
+#' gizmo_density(theme = theme_guide(
+#'   frame = element_rect(),
+#'   key = element_rect(),
+#'   key.width = unit(5, "mm")
+#'   key.height = unit(5, "cm")
+#' ))
+#' ```
+#'
 #' @return A `<GizmoDensity>` object.
 #' @family gizmos
 #' @export
@@ -61,7 +88,7 @@ gizmo_density <- function(
   theme = NULL, position = waiver(), direction = NULL
 ) {
 
-  check_number_decimal(just, min = 0, max = 1, allow_infinite = FALSE)
+  check_number_decimal(just, min = 0.0, max = 1.0, allow_infinite = FALSE)
 
   new_guide(
     key = key,
@@ -86,7 +113,7 @@ GizmoDensity <- ggproto(
 
   params = new_params(
     density = NULL, density_args = list(), density_fun = stats::density,
-    just = 0.5, nbin = 15, oob = oob_keep, alpha = NA, key = "sequence"
+    just = 0.5, nbin = 15L, oob = oob_keep, alpha = NA, key = "sequence"
   ),
 
   elements = list(
@@ -127,10 +154,10 @@ GizmoDensity <- ggproto(
     limits <- scale$get_limits()
     range  <- scale$range$range
 
-    if ((range[1] < limits[1]) || (range[2] > limits[2])) {
+    if ((range[1L] < limits[1L]) || (range[2L] > limits[2L])) {
       # Collect out-of-bounds values
-      add <- abs(diff(limits)) / 1000
-      oob <- c(-1, 1) * add + limits
+      add <- abs(diff(limits)) / 1000.0
+      oob <- c(-1.0, 1.0) * add + limits
       map <- scale$map(oob)
       aes <- params$aesthetic
 
@@ -138,14 +165,14 @@ GizmoDensity <- ggproto(
       if (all(c("min", "max") %in% names(params$key))) {
         n <- max(which(!is.na(key[[aes]])))
         key <- data_frame0(
-          !!aes := c(map[1], key[[aes]], map[2]),
+          !!aes := c(map[1L], key[[aes]], map[2L]),
           min = c(-Inf, key$min, key$max[n]),
-          max = c(key$min[1], key$max, Inf)
+          max = c(key$min[1L], key$max, Inf)
         )
       } else {
         key <- data_frame0(
-          !!aes := c(map[1], key[[aes]],  map[2]),
-          .value = c(oob[1], key$.value,  oob[2])
+          !!aes := c(map[1L], key[[aes]],  map[2L]),
+          .value = c(oob[1L], key$.value,  oob[2L])
         )
       }
     }
@@ -160,8 +187,10 @@ GizmoDensity <- ggproto(
 
   get_layer_key = function(params, layers, data = NULL, ...) {
     density <- params$decor %||% params$density
-    if (length(density) == 0) {
-      values  <- filter_finite(vec_c(!!!lapply(data, .subset2, params$aesthetic)))
+    if (length(density) == 0L) {
+      values  <-
+        vec_c(!!!lapply(data, .subset2, params$aesthetic)) |>
+        filter_finite()
       density <- inject(params$density_fun(values, !!!params$density_args))
       check_density(density)
     }
@@ -182,7 +211,7 @@ GizmoDensity <- ggproto(
       max <- key$max
       max[which.max(max)] <- Inf
       max <- guide_rescale(key$max, limits)
-      key$mid <- (max + min) / 2
+      key$mid <- (max + min) / 2.0
       key$height <- abs(max - min)
     } else {
       key$.value <- guide_rescale(key$.value, limits)
@@ -195,9 +224,9 @@ GizmoDensity <- ggproto(
   setup_elements = function(params, elements, theme) {
     theme$legend.frame <- theme$legend.frame %||% element_blank()
     if (params$direction == "horizontal") {
-      theme$legend.key.width  <- (theme$legend.key.width %||% rel(1)) * 5
+      theme$legend.key.width  <- (theme$legend.key.width %||% rel(1.0)) * 5.0
     } else {
-      theme$legend.key.height <- (theme$legend.key.height %||% rel(1)) * 5
+      theme$legend.key.height <- (theme$legend.key.height %||% rel(1.0)) * 5.0
     }
     Guide$setup_elements(params, elements, theme)
   },
@@ -205,11 +234,11 @@ GizmoDensity <- ggproto(
   build_frame = function(params, elems) {
 
     decor <- params$decor
-    just <- c(params$just, 1 - params$just)
+    just <- c(params$just, 1.0 - params$just)
 
     poly_args <- list(
       x = c(decor$x, rev(decor$x)),
-      y = c((1 - decor$y) * just[1], 1 - (1 - rev(decor$y)) * just[2])
+      y = c((1.0 - decor$y) * just[1L], 1.0 - (1.0 - rev(decor$y)) * just[2L])
     )
 
     if (params$direction == "vertical") {
@@ -249,7 +278,7 @@ GizmoDensity <- ggproto(
 
     check_device("gradients", call = expr(gizmo_density()))
     grad_args <- list(
-      x1 = 0, x2 = 1, y1 = 0.5, y2 = 0.5,
+      x1 = 0.0, x2 = 1.0, y1 = 0.5, y2 = 0.5,
       colours = key$colour %||% key$fill, stops = key$.value
     )
     if (params$direction == "vertical") {
@@ -273,7 +302,7 @@ GizmoDensity <- ggproto(
 
     gt <- gtable(widths = elems$width, heights = elems$height)
     gt <- gtable_add_grob(
-      gt, list(key, frame, gradient), t = 1, l = 1, clip = "off",
+      gt, list(key, frame, gradient), t = 1L, l = 1L, clip = "off",
       name = c("background", "frame", "density")
     )
   }
@@ -289,7 +318,7 @@ normalise_density <- function(density) {
   ylim <- range(density$y, na.rm = TRUE, finite = TRUE)
   density$y <- oob_squish_infinite(density$y, ylim)
 
-  density$y <- rescale_max(density$y, to = c(0, 0.9), from = ylim)
+  density$y <- rescale_max(density$y, to = c(0.0, 0.9), from = ylim)
   density
 }
 
@@ -302,8 +331,8 @@ check_density <- function(x, arg = caller_arg(x), call = caller_env()) {
     return(x)
   }
   check_list_names(x, c("x", "y"), arg = arg, call = call)
-  if (length(x$x) != length(x$y) || length(x$x) < 2) {
-    if (length(x$x) < 2 || length(x$y) < 2) {
+  if (length(x$x) != length(x$y) || length(x$x) < 2L) {
+    if (length(x$x) < 2L || length(x$y) < 2L) {
       extra <- " and at least length 2."
     } else {
       extra <- "."
@@ -330,4 +359,3 @@ disallow_even_steps <- function(fun, call = caller_env()) {
   }
   fun
 }
-

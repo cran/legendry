@@ -7,9 +7,9 @@
 #'
 #' * `key_segment_manual()` directly uses user-provided vectors to set segments.
 #' * `key_segment_map()` makes mappings from a `<data.frame>` to set segments.
-#' * `key_dendro()` is a specialty case for coercing dendrogram data to segments.
-#'   Be aware that setting the key alone cannot affect the scale limits, and
-#'   will give misleading results when used incorrectly!
+#' * `key_dendro()` is a specialty case for coercing dendrogram data to
+#'   segments. Be aware that setting the key alone cannot affect the scale
+#'   limits, and will give misleading results when used incorrectly!
 #'
 #' @param value,value_end A vector that is interpreted to be along the scale
 #'   that the guide codifies.
@@ -23,10 +23,18 @@
 #'   (default) an attempt is made to search for such data in the scale.
 #' @param type A string, either `"rectangle"` or `"triangle"`, indicating the
 #'   shape of edges between nodes of the dendrogram.
-#' @param ... [`<data-masking>`][rlang::topic-data-mask] A set of mappings
-#'   similar to those provided to [`aes()`][ggplot2::aes], which will be
-#'   evaluated in the `data` argument.
-#'   For `key_segments_map()`, these *must* contain `value` and `oppo` mappings.
+#' @param ...
+#' The `...` parameter has two purposes.
+#' 1. In `key_segments_map()` it is [`<data-masking>`][rlang::topic-data-mask].
+#'   A set of mappings similar to those provided to [`aes()`][ggplot2::aes],
+#'   which will be evaluated in the `data` argument. These *must* contain
+#'   `value` and `oppo` mappings.
+#' 2. In other keys, `...` can be used to transfer graphical properties to the
+#'   individual breaks of a guide. For example, using `colour = "blue"` will
+#'   draw parts of the guides associated with breaks in blue. There is a shallow
+#'   hierarchy in that `line_colour` is the specific property for segment
+#'   elements, but others inherit from the main `colour` setting. Likewise,
+#'   `linewidth` and `linetype` have specific variants for line elements.
 #' @param .call A [call][rlang::topic-error-call] to display in messages.
 #'
 #' @export
@@ -51,11 +59,12 @@
 #' clust <- hclust(dist(USArrests), "ave")
 #' key_dendro(clust)(scale_x_discrete())
 key_segment_manual <- function(value, oppo, value_end = value,
-                                oppo_end = oppo, ...) {
+                               oppo_end = oppo, ...) {
   df <- data_frame0(
     value = value, oppo = oppo,
     value_end = value_end, oppo_end = oppo_end,
-    !!!extra_args(..., .valid_args = .line_params)
+    !!!extra_args(..., .valid_args = .line_params),
+    .error_call = current_env()
   )
   check_columns(df, c("value", "oppo"))
   class(df) <- c("key_segment", "key_guide", class(df))
@@ -83,10 +92,13 @@ key_segment_map <- function(data, ..., .call = caller_env()) {
 
 #' @rdname key_segments
 #' @export
-key_dendro <- function(dendro = NULL, type = "rectangle") {
+key_dendro <- function(dendro = NULL, type = "rectangle", ..., .call = NULL) {
+  call <- .call %||% current_call()
+  dots <- extra_args(..., .valid_args = .line_params)
   force(dendro)
   function(scale, aesthetic = NULL, ...) {
-    extract_dendro(scale$scale$clust %||% dendro, type = type)
+    key <- extract_dendro(scale$scale$clust %||% dendro, type = type)
+    data_frame0(key, !!!dots, .error_call = call)
   }
 }
 
@@ -122,11 +134,12 @@ segment_extract_key <- function(scale, aesthetic, key, ...) {
   i <- rep(vec_seq_along(key), each = 2L)
   new_key[names(key)] <- vec_slice(key, i)
   new_key$group <- new_key$group %||% i
-  new_key$oppo  <- rescale(new_key$oppo, from = range(new_key$oppo, 0))
+  new_key$oppo  <- rescale(new_key$oppo, from = range(new_key$oppo, 0.0))
 
   # Normalise key column names
   if (aesthetic %in% c("x", "y")) {
-    new_key <- rename(new_key, c("value", "oppo"), union(aesthetic, c("x", "y")))
+    new_names <- union(aesthetic, c("x", "y"))
+    new_key <- rename(new_key, c("value", "oppo"), new_names)
   } else {
     new_key <- rename(new_key, "value", aesthetic)
     new_key$.value <- new_key[[aesthetic]]
@@ -141,62 +154,50 @@ segment_extract_key <- function(scale, aesthetic, key, ...) {
 extract_dendro <- function(tree, type = "rectangle") {
 
   # Check arguments
-  whole_tree <- tree <- try_fetch(
-    stats::as.dendrogram(tree),
-    error = function(cnd) {
-      cli::cli_abort("Could not find or coerce {.arg dendro} argument.", parent = cnd)
-    }
-  )
-  type <- arg_match0(type, c("rectangle", "triangle"))
+  whole_tree <- tree <- as_dendrogram(tree)
 
   # Initialise stuff
-  depth <- 0
+  depth <- 0L
   llimit <- list()
-  x1 <- i <- 1
+  x1 <- i <- 1L
   x2 <- number_of_members(tree)
   KK <- kk <- integer()
 
-  n_obs <- stats::nobs(tree)
-  n_segments <- switch(type, triangle = 2 * n_obs - 2, 4 * n_obs - 4)
-
-  mtx <- matrix(NA_real_, n_segments, ncol = 4)
-  colnames(mtx) <- c("value", "oppo", "value_end", "oppo_end")
+  mtx <- setup_segments(stats::nobs(tree), type)
+  col_order <- attr(mtx, "order", exact = TRUE)
+  row_index <- attr(mtx, "offset", exact = TRUE)
+  row_step  <- length(row_index)
 
   repeat {
-    depth <- depth + 1
+    depth <- depth + 1L
     inner <- !stats::is.leaf(tree) && x1 != x2
 
     node <- node_limit(x1, x2, tree)
     llimit[[depth]] <- node$limit
 
-    ymax <- attr(tree, 'height')
+    ymax <- attr(tree, "height")
     xmax <- node$x
 
     if (inner) {
       for (k in seq_along(tree)) {
         child <- tree[[k]]
 
-        ymin <- attr(child, "height") %||% 0
-        xmin <- node$limit[k] + (attr(child, "midpoint") %||% 0)
+        ymin <- attr(child, "height") %||% 0.0
+        xmin <- node$limit[k] + (attr(child, "midpoint") %||% 0.0)
 
-        # Update segments
-        if (type == "triangle") {
-          mtx[i, ] <- c(xmax, ymax, xmin, ymin)
-          i <- i + 1
-        } else {
-          mtx[i + 0:1, ] <- c(xmax, xmin, ymax, ymax, xmin, xmin, ymax, ymin)
-          i <- i + 2
-        }
+        mtx[i + row_index, ] <- c(xmax, ymax, xmin, ymin)[col_order]
+        i <- i + row_step
       }
-      if (length(tree) > 0) {
+      if (length(tree) > 0L) {
         KK[depth] <- length(tree)
         kk[depth] <- 1L
         x1 <- node$limit[1L]
         x2 <- node$limit[2L]
-        tree <- tree[[1]]
+        tree <- tree[[1L]]
       }
     } else {
       repeat {
+        # We climb back up the tree until we have unvisited children
         depth <- depth - 1L
         if (!depth || kk[depth] < KK[depth]) {
           break
@@ -213,6 +214,33 @@ extract_dendro <- function(tree, type = "rectangle") {
     }
   }
   as.data.frame(mtx)
+}
+
+setup_segments <- function(n_obs, type = "triangle") {
+  type <- arg_match0(type, c("rectangle", "triangle"))
+  if (type == "triangle") {
+    n_segments <- 2L * n_obs - 2L
+    i_increment <- 1L
+    i_offset <- 0L
+    coord_order <- c(1L, 2L, 3L, 4L)
+  } else {
+    n_segments <- 4L * n_obs - 4L
+    i_increment <- 2L
+    i_offset <- 0L:1L
+    # xmax -> xmin -> ymax -> ymax -> xmin -> xmin -> ymax -> ymin
+    coord_order <- c(1L, 3L, 2L, 2L, 3L, 3L, 2L, 4L)
+  }
+
+  mtx <- matrix(NA_real_, n_segments, ncol = 4L)
+
+  attributes(mtx) <- list(
+    offset = i_offset,
+    increment = i_increment,
+    order = coord_order,
+    dim = dim(mtx)
+  )
+  colnames(mtx) <- c("value", "oppo", "value_end", "oppo_end")
+  mtx
 }
 
 # Copy of `stats:::.memberDend()`
@@ -238,7 +266,19 @@ node_limit <- function(x1, x2, subtree) {
   limit <- c(x1, limit)
   mid <- attr(subtree, "midpoint")
   center <- inner && !is.numeric(mid)
-  x <- if (center) mean(c(x1, x2)) else x1 + (mid %||% 0)
+  x <- if (center) mean(c(x1, x2)) else x1 + (mid %||% 0L)
   list(x = x, limit = limit)
 }
 
+as_dendrogram <- function(tree) {
+  # Check arguments
+  try_fetch(
+    stats::as.dendrogram(tree),
+    error = function(cnd) {
+      cli::cli_abort(
+        "Could not find or coerce {.arg dendro} argument.",
+        parent = cnd
+      )
+    }
+  )
+}

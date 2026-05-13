@@ -12,13 +12,16 @@ primitive_title(
 )
 }
 \arguments{
-\item{title}{A \verb{<character[1]>} or \verb{<expression[1]>} indicating the title of
-the guide. If \code{NULL}, the title is not shown. The default,
-\code{\link[ggplot2:waiver]{waiver()}}, takes the name of the scale object or
-the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.}
+\item{title}{One of the following to indicate the title of the guide:
+\itemize{
+\item A \verb{<character[1]>} or \verb{<expression[1]>} to set a custom title.
+\item \code{NULL} to not display any title.
+\item \code{\link[ggplot2:waiver]{waiver()}} (default) to take the name of the scale
+object or the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.
+}}
 
 \item{angle}{A specification for the text angle. Compared to setting the \code{angle} argument
-in \code{\link[ggplot2:element]{element_text()}}, this argument uses some
+in \code{\link[ggplot2:element_text]{element_text()}}, this argument uses some
 heuristics to automatically pick the \code{hjust} and \code{vjust} that you
 probably want. Can be one of the following:
 \itemize{
@@ -42,25 +45,29 @@ guides.
 \description{
 This function constructs a title \link[=guide-primitives]{guide primitive}.
 }
-\section{Styling options}{
+\details{
+\subsection{Styling options}{
+
 Below are the \link[ggplot2:theme]{theme} options that determine the styling of
 this guide, which may differ depending on whether the guide is used in
-an axis or in a legend context.
-\subsection{As an axis guide}{
-\itemize{
-\item \verb{axis.title.\{x/y\}.\{position\}} an \code{\link[ggplot2:element]{<element_text>}}
-for the title display.
-}
+an axis or in a legend context.\tabular{llll}{
+   \strong{Theme setting} \tab \strong{Context} \tab \strong{Type} \tab \strong{Description} \cr
+   \verb{axis.title.\{x/y\}.\{position\}} \tab Axis \tab \code{\link[ggplot2:element_text]{element_text()}} \tab The title itself. \cr
+   \code{legend.title} \tab Legend \tab \code{\link[ggplot2:element_text]{element_text()}} \tab The title itself. \cr
 }
 
-\subsection{As a legend guide}{
-\itemize{
-\item \code{legend.title} an \code{\link[ggplot2:element]{<element_text>}}
-for the title display.
-}
-}
-}
 
+There are no further styling options.
+
+The context-agnostic alternative to using \code{theme()} is to use
+\code{\link[=theme_guide]{theme_guide()}}:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{primitive_title(theme = theme_guide(
+  title = element_text(),
+))
+}\if{html}{\out{</div>}}
+}
+}
 \examples{
 # A standard plot
 p <- ggplot(mpg, aes(displ, hwy)) +
@@ -71,16 +78,22 @@ p + guides(
   x.sec = primitive_title("Horizontal Title"),
   y.sec = primitive_title(c("along vertical", "Multiple tiles"))
 )
+
+# 'Real' titles occur once per plot.
+# Primitive titles repeat over facets and hide the 'real' title.
+p + facet_wrap(~ drv) +
+  guides(x = primitive_title("I am a repeated subtitle")) +
+  labs(x = "I am the hidden real title")
 }
 \seealso{
-Other primitives: 
-\code{\link{primitive_box}()},
-\code{\link{primitive_bracket}()},
-\code{\link{primitive_fence}()},
-\code{\link{primitive_labels}()},
-\code{\link{primitive_line}()},
-\code{\link{primitive_segments}()},
-\code{\link{primitive_spacer}()},
-\code{\link{primitive_ticks}()}
+Other primitives:
+\code{\link[=primitive_box]{primitive_box()}},
+\code{\link[=primitive_bracket]{primitive_bracket()}},
+\code{\link[=primitive_fence]{primitive_fence()}},
+\code{\link[=primitive_labels]{primitive_labels()}},
+\code{\link[=primitive_line]{primitive_line()}},
+\code{\link[=primitive_segments]{primitive_segments()}},
+\code{\link[=primitive_spacer]{primitive_spacer()}},
+\code{\link[=primitive_ticks]{primitive_ticks()}}
 }
 \concept{primitives}

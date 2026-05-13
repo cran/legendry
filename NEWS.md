@@ -1,3 +1,39 @@
+# legendry 0.3.0
+
+This minor version is a small feature release, introducing several new guides,
+arguments and changes to keys.
+
+* New guide `guide_legend_manual()` for user defined keys (#88)
+* New guide `guide_axis_plot()` to place side-plots (#43)
+* New guide `guide_axis_upset()` to place symbols in upset matrices next to axes. 
+  Also comes with `key_upset()` to match (#38).
+* New guide `guide_axis_symbols()` for a more manual version of placing symbols. 
+  Also comes with `key_symbols()` to match (#38).
+* New guide `guide_axis_annotation()` to jot down annotations. Includes the
+  helpers `annotate_top/right/bottom/left()` for convenience (#89).
+* New key `key_range_rle()` to create a range annotation based on run-length 
+  encoding.
+* New arguments `guide_axis_base(subtitle)` and `guide_axis_nested(subtitle)` 
+  make it easier to title custom axes (#102)
+* New arguments `guide_legend_cross(row_title, col_title, subtitle_position)`
+  to display subtitles over dimensions (#79).
+* `compose_stack(side.titles)` also work in non-position guides (#101)
+* Changed the margins and inferred justification of the `legendry.axis.subtitle`
+  and `legendry.legend.subtitle` theme elements.
+* Changed `...` argument in many `key_*()` functions to transfer graphical 
+  properties like `colour` or `linewidth` to guides. Different parts of guides 
+  can be targeted by specifying 
+  `text_colour`/`line_colour`/`rect_colour`/`point_colour`.
+* Changed `key_group_split()` to preserve order of labels better, rather than 
+  re-sorting them (#100).
+* Updated title mechanism to comply with ggplot2#6200 (#104)
+* Updated lifecycle of `new_compose()`, `compose_ontop()`, `compose_stack()` 
+  from 'experimental' to 'stable'.
+* Fixed a bug where empty titles in legends contributed to spacing. Visual
+  tests depending on legendry may see subtle positioning shifts (#113).
+* Fixed a bug where `guide_legend_group()` struggled to merge different 
+  scales (#112).
+
 # legendry 0.2.4
 
 This is a patch release fixing a few bugs.

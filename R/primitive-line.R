@@ -25,21 +25,26 @@
 #' @family primitives
 #'
 #' @details
-#' # Styling options
+#' ## Styling options
 #'
 #' Below are the [theme][ggplot2::theme] options that determine the styling of
 #' this guide, which may differ depending on whether the guide is used in
 #' an axis or in a legend context.
 #'
-#' ## As an axis guide
+#' | **Theme setting** | **Context** | **Type** | **Description** |
+#' | ----------------- | ----------- | -------- | --------------- |
+#' | `axis.line.{x/y}.{position}` | Axis | [`element_line()`] | The axis line. |
+#' | `legend.axis.line` | Legend | [`element_line()`] | The axis line. |
 #'
-#' * `axis.line.{x/y}.{position}` an [`<element_line>`][ggplot2::element_line]
-#'   for the line style.
+#' There are no other styling options.
+#' The context-agnostic alternative to using `theme()` is to use
+#' [`theme_guide()`]:
 #'
-#' ## As a legend guide
-#'
-#' * `legend.axis.line` an [`<element_line>`][ggplot2::element_line] for the
-#'   line style.
+#' ```r
+#' primitive_line(theme = theme_guide(
+#'   line = element_line()
+#' ))
+#' ```
 #'
 #' @examples
 #' # A standard plot
@@ -53,7 +58,7 @@
 #'   y.sec = primitive_line(cap = "both")
 #' )
 primitive_line <- function(key = NULL, cap = "none", theme = NULL,
-                       position = waiver()) {
+                           position = waiver()) {
   new_guide(
     key = key,
     cap = check_cap_arg(cap),
@@ -87,7 +92,7 @@ PrimitiveLine <- ggproto(
   extract_decor = function(scale, aesthetic, position, cap, key, ...) {
     limits <- scale$continuous_range %||% scale$get_limits()
     if (is.function(cap)) {
-      if (length(fn_fmls_names(cap)) == 1) {
+      if (length(fn_fmls_names(cap)) == 1L) {
         cap <- cap(key[[aesthetic]])
       } else {
         cap <- cap(key[[aesthetic]], limits)
@@ -106,8 +111,8 @@ PrimitiveLine <- ggproto(
       decor[[aesthetic]] <- value
     }
 
-    group <- seq_len(ceiling(nrow(decor) / 2))
-    decor$group <- rep(group, each = 2, length.out = nrow(decor))
+    group <- seq_len(ceiling(nrow(decor) / 2L))
+    decor$group <- rep(group, each = 2L, length.out = nrow(decor))
     decor
   },
 
@@ -136,11 +141,13 @@ PrimitiveLine <- ggproto(
       if (params$position %in% c("left", "right")) {
         y <- unit(value, "npc")
         x <- as.numeric(params$position == "left") |>
-          rep(length.out = length(y)) |> unit("npc")
+          rep_len(length.out = length(y)) |>
+          unit("npc")
       } else {
         x <- unit(value, "npc")
         y <- as.numeric(params$position == "bottom") |>
-          rep(length.out = length(x)) |> unit("npc")
+          rep_len(length.out = length(x)) |>
+          unit("npc")
       }
     }
     element_grob(
@@ -161,7 +168,7 @@ PrimitiveLine <- ggproto(
 
     primitive_grob(
       grob = decor,
-      size = unit(0, "cm"),
+      size = unit(0.0, "cm"),
       position = params$position,
       name = "line"
     )
@@ -178,10 +185,14 @@ check_cap_arg <- function(cap, call = caller_env()) {
   if (is.character(cap)) {
     cap <- switch(
       cap,
-      "none"  = c(-Inf, Inf),
-      "both"  = function(breaks, limits) range(breaks, na.rm = TRUE),
-      "upper" = function(breaks, limits) c(limits[1], max(breaks, na.rm = TRUE)),
-      "lower" = function(breaks, limits) c(min(breaks, na.rm = TRUE), limits[2]),
+      none  =
+        c(-Inf, Inf),
+      both  =
+        function(breaks, limits) range(breaks, na.rm = TRUE),
+      upper =
+        function(breaks, limits) c(limits[1L], max(breaks, na.rm = TRUE)),
+      lower =
+        function(breaks, limits) c(min(breaks, na.rm = TRUE), limits[2L]),
       arg_match0(cap, c("none", "both", "upper", "lower"))
     )
   }

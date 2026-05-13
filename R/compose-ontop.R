@@ -3,15 +3,19 @@
 #' Compose guides on top of one another
 #'
 #' @description
-#' `r lifecycle::badge("experimental")`
-#'
-#' This guide can place place other guides on top of one another.
+#' This guide can place other guides on top of one another.
 #'
 #' @inheritParams compose_stack
 #'
 #' @return A `<ComposeOntop>` composite guide object.
 #' @export
 #' @family composition
+#'
+#' @details
+#' ## Styling options
+#'
+#' There are no styling options in `theme()` for this composition.
+#'
 #'
 #' @examples
 #' # Using the ontop composition to get two types of ticks with different
@@ -37,7 +41,7 @@
 compose_ontop <- function(
   ..., args = list(),
   key = NULL, title = waiver(),
-  angle = waiver(), theme = NULL, order = 0,
+  angle = waiver(), theme = NULL, order = 0L,
   position = waiver(), available_aes = NULL
 ) {
   new_compose(
@@ -67,15 +71,15 @@ ComposeOntop <- ggproto(
                   params = self$params) {
     theme <- theme + params$theme
 
-    position  <- params$position  %||% position
-    direction <- params$direction %||% direction
+    params$position  <- position  <- params$position  %||% position
+    params$direction <- direction <- params$direction %||% direction
 
     n_guides <- length(params$guides)
     guide_index <- seq_len(n_guides)
     grobs <- vector("list", n_guides)
 
     if (is_theta(position)) {
-      stack_offset <- unit(cm(params$stack_offset %||% 0), "cm")
+      stack_offset <- unit(cm(params$stack_offset %||% 0.0), "cm")
       offset <- stack_offset
 
       for (i in guide_index) {
@@ -109,33 +113,42 @@ ComposeOntop <- ggproto(
       )
     }
 
-    keep  <- !map_lgl(grobs, is_zero)
+    self$assemble_drawing(grobs, params = params)
+  },
+
+  assemble_drawing = function(grobs, layout = NULL, sizes = NULL, params, elements = NULL) {
+    keep <- !map_lgl(grobs, is_zero)
     grobs <- grobs[keep]
-    if (length(grobs) == 0) {
+    if (length(grobs) == 0L) {
       return(zeroGrob())
     }
 
-    origin <- unit(as.numeric(position %in% c("left", "bottom")), "npc")
-    just   <- opposite_position(position)
-    along  <- seq_along(grobs)
-    widths <- width_cm(grobs)
+    position <- params$position
+    anchor <- unit(as.numeric(position %in% c("left", "bottom")), "npc")
+    just <- opposite_position(position)
+
+    widths  <- width_cm(grobs)
     heights <- height_cm(grobs)
-    names <- paste0("guide-ontop-", along)
+
+    index <- seq_along(grobs)
+    names <- paste0("guide-ontop", index)
 
     if (position %in% c("bottom", "top")) {
       height <- unit(max(heights), "cm")
-      gt <- gtable(widths = unit(1, "npc"), heights = height)
-      gt <- gtable_add_grob(gt, grobs, t = 1, l = 1, name = names, clip = "off")
-      vp <- viewport(y = origin, height = height, just = just)
+      gt <- gtable(widths = unit(1.0, "npc"), heights = height) |>
+        gtable_add_grob(grobs, t = 1L, l = 1L, name = names, clip = "off")
+      vp <- viewport(y = anchor, height = height, just = just)
     } else {
       width <- unit(max(widths), "cm")
-      gt <- gtable(widths = width, heights = unit(1, "npc"))
-      gt <- gtable_add_grob(gt, grobs, t = 1, l = 1, name = names, clip = "off")
-      vp <- viewport(x = origin, width = width, just = just)
+      gt <- gtable(widths = width, heights = unit(1.0, "npc")) |>
+        gtable_add_grob(grobs, t = 1L, l = 1L, name = names, clip = "off")
+      vp <- viewport(x = anchor, width = width, just = just)
     }
+
     absoluteGrob(
-      grob = gList(gt), vp = vp,
-      width = gtable_width(gt), height = gtable_height(gt)
+      grob   = gList(gt), vp = vp,
+      width  = gtable_width(gt),
+      height = gtable_height(gt)
     )
   }
 )

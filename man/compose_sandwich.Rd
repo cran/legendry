@@ -15,7 +15,7 @@ compose_sandwich(
   theme = NULL,
   theme_defaults = list(),
   reverse = FALSE,
-  order = 0,
+  order = 0L,
   title = waiver(),
   position = waiver(),
   available_aes = NULL
@@ -66,10 +66,13 @@ multiple guides. This controls in which order guides are merged if there
 are multiple guides for the same position. If \code{0} (default), the order is
 determined by a hashing indicative settings of a guide.}
 
-\item{title}{A \verb{<character[1]>} or \verb{<expression[1]>} indicating the title of
-the guide. If \code{NULL}, the title is not shown. The default,
-\code{\link[ggplot2:waiver]{waiver()}}, takes the name of the scale object or
-the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.}
+\item{title}{One of the following to indicate the title of the guide:
+\itemize{
+\item A \verb{<character[1]>} or \verb{<expression[1]>} to set a custom title.
+\item \code{NULL} to not display any title.
+\item \code{\link[ggplot2:waiver]{waiver()}} (default) to take the name of the scale
+object or the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.
+}}
 
 \item{position}{Where this guide should be drawn: one of \code{"top"}, \code{"bottom"},
 \code{"left"}, or \code{"right"}.}
@@ -88,6 +91,33 @@ This guide composition has a middle guide flanked by two parallel guides.
 \details{
 The sandwich composition is effectively the same as a
 \link[=compose_crux]{crux composition} lacking two opposing arms.
+\subsection{Styling options}{
+
+Below are the \link[ggplot2:theme]{theme} options that determine the styling of
+this guide.\tabular{lll}{
+   \strong{Theme setting} \tab \strong{Type} \tab \strong{Description} \cr
+   \code{legend.title} \tab \code{\link[ggplot2:element_text]{element_text()}} \tab The title of the legend. \cr
+   \code{legend.title.position} \tab \verb{<character[1]>} \tab One of \code{"top"}, \code{"right"}, \code{"bottom"} or \code{"left"}. \cr
+   \code{legend.text.position} \tab \verb{<character[1]>} \tab One of \code{"top"}, \code{"right"}, \code{"bottom"} or \code{"left"}. \cr
+   \code{legend.margin} \tab \code{\link[ggplot2:margin]{margin()}} \tab Padding around the legend. \cr
+   \code{legend.background} \tab \code{\link[ggplot2:element_rect]{element_rect()}} \tab Background of the legend. \cr
+}
+
+
+There are no further styling options.
+
+The context-agnostic alternative to using \code{theme()} is to use
+\code{\link[=theme_guide]{theme_guide()}}:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{compose_sandwich(theme = theme_guide(
+  title = element_text(),
+  title.position = "top",
+  text.position = "right",
+  margin = margin(5),
+  background = element_rect()
+))
+}\if{html}{\out{</div>}}
+}
 }
 \examples{
 # A standard plot with a sandwich guide
@@ -102,10 +132,10 @@ ggplot(mpg, aes(displ, hwy)) +
   ))
 }
 \seealso{
-Other composition: 
-\code{\link{compose_crux}()},
-\code{\link{compose_ontop}()},
-\code{\link{compose_stack}()},
+Other composition:
+\code{\link[=compose_crux]{compose_crux()}},
+\code{\link[=compose_ontop]{compose_ontop()}},
+\code{\link[=compose_stack]{compose_stack()}},
 \code{\link{guide-composition}}
 }
 \concept{composition}

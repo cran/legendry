@@ -7,7 +7,7 @@ new_params <- function(...) {
     position = waiver(),
     direction = NULL,
     order = 0L,
-    hash = character(0)
+    hash = character(0L)
   )
   dots <- list2(...)
   for (i in names(dots)) required[i] <- dots[i]
@@ -15,7 +15,6 @@ new_params <- function(...) {
 }
 
 .trbl <- c("top", "right", "bottom", "left")
-.trblt <- c(.trbl, c("theta", "theta.sec"))
 
 standard_extract_key <- function(scale, aesthetic, key, ...) {
   key <- resolve_key(key %||% "auto")

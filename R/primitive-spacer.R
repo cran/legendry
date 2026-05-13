@@ -3,6 +3,7 @@
 #' Guide primitive: spacer
 #'
 #' This function constructs a spacer [guide primitive][guide-primitives].
+#' The spacer is intended for use in [guide composition][guide-composition].
 #'
 #' @param space A [`<unit[1]>`][grid::unit()]
 #' @inheritParams common_parameters
@@ -13,14 +14,25 @@
 #' @family primitives
 #'
 #' @details
-#' # Styling options
+#' ## Styling options
 #'
-#' #' Below are the [theme][ggplot2::theme] options that determine the styling of
-#' this guide. This guide does not have option dependent on its role as axis or
-#' legend.
+#' Below are the [theme][ggplot2::theme] options that determine the styling of
+#' this guide. In context to many primitive guides, whether it is used in an
+#' axis or legend has no bearing on the style.
 #'
-#' * `legendry.guide.spacing` A [`<unit>`][grid::unit] setting the amount of
-#'   spacing when the `space` argument is `NULL`.
+#' | **Theme setting** | **Context** | **Type** | **Description** |
+#' | ----------------- | ----------- | -------- | --------------- |
+#' | `legendry.guide.spacing` | Any | [`unit()`] | Fallback amount of spacing when the `space` argument is `NULL` |
+#'
+#' There are no other styling options.
+#' The context-agnostic alternative to using `theme()` is to use
+#' [`theme_guide()`]:
+#'
+#' ```r
+#' primitive_spacer(theme = theme_guide(
+#'   spacing = unit(5, "mm"),
+#' ))
+#' ```
 #'
 #' @examples
 #' ggplot(mpg, aes(displ, hwy)) +
@@ -50,7 +62,7 @@ PrimitiveSpacer <- ggproto(
   params = new_params(space = NULL),
 
   train = function(self, params = self$params, scale, aesthetic = NULL, ...) {
-    params$aesthetic <- aesthetic %||% scale$aesthetics[1]
+    params$aesthetic <- aesthetic %||% scale$aesthetics[1L]
     params$position  <- params$position %|W|% NULL
     params$hash <- hash(list(params$position, params$space))
     params

@@ -9,6 +9,7 @@ guide_axis_nested(
   regular_key = "auto",
   type = "bracket",
   title = waiver(),
+  subtitle = NULL,
   theme = NULL,
   angle = waiver(),
   cap = "none",
@@ -18,7 +19,7 @@ guide_axis_nested(
   pad_discrete = NULL,
   levels_text = NULL,
   ...,
-  order = 0,
+  order = 0L,
   position = waiver()
 )
 }
@@ -35,20 +36,30 @@ specification.
 \item{regular_key}{A \link[=key_standard]{standard key} specification for the
 appearance of regular tick marks.}
 
-\item{type}{Appearance of ranges, either \code{"box"} to put text in boxes or
-\code{"bracket"} (default) to text brackets.}
+\item{type}{Appearance of ranges. One of the following:
+\itemize{
+\item \code{"box"} to put text in boxes.
+\item \code{"bracket"} (default) to text over brackets.
+\item \code{"fence"} to put text near fences.
+}}
 
-\item{title}{A \verb{<character[1]>} or \verb{<expression[1]>} indicating the title of
-the guide. If \code{NULL}, the title is not shown. The default,
-\code{\link[ggplot2:waiver]{waiver()}}, takes the name of the scale object or
-the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.}
+\item{title}{One of the following to indicate the title of the guide:
+\itemize{
+\item A \verb{<character[1]>} or \verb{<expression[1]>} to set a custom title.
+\item \code{NULL} to not display any title.
+\item \code{\link[ggplot2:waiver]{waiver()}} (default) to take the name of the scale
+object or the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.
+}}
+
+\item{subtitle}{Passed on to \code{\link[=primitive_title]{primitive_title(title)}}.
+Follow the linked topic for more details.}
 
 \item{theme}{A \code{\link[ggplot2:theme]{<theme>}} object to style the guide individually or
 differently from the plot's theme settings. The \code{theme} argument in the
 guide overrides and is combined with the plot's theme.}
 
 \item{angle}{A specification for the text angle. Compared to setting the \code{angle} argument
-in \code{\link[ggplot2:element]{element_text()}}, this argument uses some
+in \code{\link[ggplot2:element_text]{element_text()}}, this argument uses some
 heuristics to automatically pick the \code{hjust} and \code{vjust} that you
 probably want. Can be one of the following:
 \itemize{
@@ -93,7 +104,8 @@ the \code{drop_zero} setting.}
 text appears at every level.}
 
 \item{...}{Arguments passed on to \code{\link[=primitive_bracket]{primitive_bracket()}},
-\code{\link[=primitive_box]{primitive_box()}} or \code{\link[=primitive_fence]{primitive_fence()}}.}
+\code{\link[=primitive_box]{primitive_box()}} or \code{\link[=primitive_fence]{primitive_fence()}} (depending on the \code{type}
+argument).}
 
 \item{order}{A positive \verb{<integer[1]>} that specifies the order of this guide among
 multiple guides. This controls in which order guides are merged if there
@@ -111,18 +123,60 @@ This axis guide gives extra range annotations to position scales. It can
 be used to infer nesting structure from labels or annotate ranges.
 }
 \details{
-Under the hood, this guide is a \link[=compose_stack]{stack composition} of a
-\link[=primitive_line]{line}, \link[=primitive_ticks]{ticks}, optionally
-\link[=primitive_labels]{labels} and either \link[=primitive_bracket]{bracket},
-\link[=primitive_box]{box} or \link[=primitive_fence]{fence} primitives.
+To offer other keys the opportunity to display ranges alongside
+regular-looking labels, the \code{regular_key} argument can be used to setup a
+separate key for display in between the ticks and ranges.
 
 By default, the \code{\link[=key_range]{key = "range_auto"}} will incorporate the 0th
 level labels inferred from the scale's labels. These labels will look like
 regular labels.
+\subsection{Styling options}{
 
-To offer other keys the opportunity to display ranges alongside
-regular-looking labels, the \code{regular_key} argument can be used to setup a
-separate key for display in between the ticks and ranges.
+Because this guide is pure composite guide, the \link[ggplot2:theme]{theme}
+options that govern the styling are determined by its constituents. They are
+linked below so you can find their 'Styling options' sections.\tabular{lll}{
+   \strong{Primitive} \tab \strong{Context} \tab \strong{Description} \cr
+   \code{\link{compose_stack}} \tab Always \tab Stacks the other primitives. \cr
+   \code{\link[=primitive_line]{primitive_line()}} \tab Always \tab Makes up the axis line. \cr
+   \code{\link[=primitive_ticks]{primitive_ticks()}} \tab Always \tab Makes up the tick marks. \cr
+   \code{\link[=primitive_bracket]{primitive_bracket()}} \tab \code{type = "bracket"} \tab Range display as brackets. \cr
+   \code{\link[=primitive_box]{primitive_box()}} \tab \code{type = "box"} \tab Range display as boxes. \cr
+   \code{\link[=primitive_fence]{primitive_fence()}} \tab \code{type = "fence"} \tab Range display as fences. \cr
+   \code{\link[=primitive_title]{primitive_title()}} \tab \verb{subtitle = <...>} \tab Used for displaying subtitles. \cr
+   \code{\link[=primitive_labels]{primitive_labels()}} \tab \code{key != "range_auto"} \tab Used for displaying range-less, 0th level labels \cr
+}
+
+
+Styling options \emph{per range} can be set in the \link[=key_range]{range key}.
+These override theme settings.
+
+The context-agnostic alternative to using \code{theme()} is to use
+\code{\link[=theme_guide]{theme_guide()}}:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{guide_axis_nested(theme = theme_guide(
+  # Common options
+  line = element_line(),
+  text = element_text(),
+  ticks = element_line(),
+  ticks.length = unit(5, "mm"),
+
+  # For brackets
+  bracket = element_line(),
+  bracket.size = unit(5, "mm"),
+
+  # For boxes
+  box = element_rect(),
+
+  # For fences
+  fence = element_line(),
+  fence.post = element_line(),
+  fence.rail = element_line(),
+
+  # For subtitle (not main title)
+  title = element_text()
+))
+}\if{html}{\out{</div>}}
+}
 }
 \examples{
 # A plot with nested categories on the x-axis
@@ -160,20 +214,28 @@ p + guides(x = guide_axis_nested(type = "fence", rail = "inner")) +
 ggplot(mpg, aes(displ, hwy)) +
   geom_point() +
   guides(x = guide_axis_nested(
-    key = key_range_manual(start = 2:3, end = 5:6, name = c("First", "Second")),
+    key = key_range_manual(
+      start = 2:3,
+      end = 5:6,
+      name = c("First", "Second")
+    ),
     regular_key = key_manual(c(2, 2.5, 3, 5, 7))
   ))
 }
 \seealso{
-Other standalone guides: 
-\code{\link{guide_axis_base}()},
-\code{\link{guide_axis_dendro}()},
-\code{\link{guide_circles}()},
-\code{\link{guide_colbar}()},
-\code{\link{guide_colring}()},
-\code{\link{guide_colsteps}()},
-\code{\link{guide_legend_base}()},
-\code{\link{guide_legend_cross}()},
-\code{\link{guide_legend_group}()}
+Other standalone guides:
+\code{\link[=guide_axis_annotation]{guide_axis_annotation()}},
+\code{\link[=guide_axis_base]{guide_axis_base()}},
+\code{\link[=guide_axis_dendro]{guide_axis_dendro()}},
+\code{\link[=guide_axis_plot]{guide_axis_plot()}},
+\code{\link[=guide_axis_symbols]{guide_axis_symbols()}},
+\code{\link[=guide_circles]{guide_circles()}},
+\code{\link[=guide_colbar]{guide_colbar()}},
+\code{\link[=guide_colring]{guide_colring()}},
+\code{\link[=guide_colsteps]{guide_colsteps()}},
+\code{\link[=guide_legend_base]{guide_legend_base()}},
+\code{\link[=guide_legend_cross]{guide_legend_cross()}},
+\code{\link[=guide_legend_group]{guide_legend_group()}},
+\code{\link[=guide_legend_manual]{guide_legend_manual()}}
 }
 \concept{standalone guides}

@@ -18,7 +18,60 @@
 #' @param reverse A `<logical[2]>` whether the order of the keys should be
 #'   inverted, where the first value controls the row order and second value
 #'   the column order. Input as `<logical[1]>` will be recycled.
+#' @param row_title,col_title One of the following to indicate subtitles
+#'   spanning the rows and columns of the guide:
+#'   * A `<character[1]>` or `<expression[1]>` to set a custom title.
+#'   * `NULL` to not display any title.
+#'   * [`waiver()`][ggplot2::waiver()] to propagate subtitles from
+#'     merging guides (default).
+#' @param subtitle_position A named list of 4
+#'   [text elements][ggplot2::element_text()], having the names `"top"`,
+#'   `"right"`, `"bottom"` and `"left`. These govern the display of subtitles
+#'   when placed in any of these positions relative to the keys. See
+#'   [`position_text()`] for a convenient helper.
 #' @inheritParams common_parameters
+#'
+#' @details
+#' ## Styling options
+#'
+#' Below are the [theme][ggplot2::theme] options that determine the styling of
+#' this guide. Note that these are almost the same for
+#' [`ggplot2::guide_legend()`].
+#'
+#' | **Theme setting** | **Type** | **Description** |
+#' | ----------------- | -------- | --------------- |
+#' | `legend.background`| [`element_rect()`] | Background of the legend. |
+#' | `legend.margin` | [`margin()`] | Padding around the legend. |
+#' | `legend.text` | [`element_text()`] | Labels displayed next to keys. |
+#' | `legend.text.position` | `<character[1]>` | One of `"top"`, `"right"`, `"bottom"` or `"left"`. |
+#' | `legend.title` | [`element_text()`] | Title of the legend. |
+#' | `legend.title.position` | `<character[1]>` | One of `"top"`, `"right"`, `"bottom"` or `"left"`. |
+#' | `legend.key` | [`element_rect()`] | Background of the key areas. |
+#' | `legend.key.height` | [`unit()`] | Height of keys. |
+#' | `legend.key.width` | [`unit()`] | Width of keys. |
+#' | `legend.key.justification` | `<numeric[2]>` | Justification for placing legend keys in excess space. |
+#' | `legend.key.spacing.x` | [`unit()`] | Horizontal spacing between keys. |
+#' | `legend.key.spacing.y` | [`unit()`] | Vertical spacing between keys. Taken literally. |
+#'
+#' The context-agnostic alternative to using `theme()` is to use
+#' [`theme_guide()`]:
+#'
+#' ```r
+#' guide_legend_cross(theme = theme_guide(
+#'   text = element_text(),
+#'   text.position = "right",
+#'   title = element_text(),
+#'   title.position = "top",
+#'   key = element_rect(),
+#'   key.height = unit(5, "mm"),
+#'   key.width = unit(5, "mm"),
+#'   key.justification = c(0.5, 0.5),
+#'   key.spacing.x = unit(5, "mm"),
+#'   key.spacing.y = unit(5, "mm"),
+#'   margin = margin(5),
+#'   background = element_rect(),
+#' ))
+#' ```
 #'
 #' @return A `<GuideLegend>` object.
 #' @export
@@ -63,26 +116,40 @@
 guide_legend_cross <- function(
   key = NULL,
   title = waiver(),
+  row_title = waiver(),
+  col_title = waiver(),
   swap = FALSE,
-  col_text = element_text(angle = 90, vjust = 0.5),
+  col_text = element_text(angle = 90.0, vjust = 0.5),
+  subtitle_position =
+    position_text(angle = c(0.0, -90.0, 0.0, 90.0), hjust = 0.5),
   override.aes = list(),
   reverse = FALSE,
   theme = NULL,
   position = NULL,
   direction = NULL,
-  order = 0
+  order = 0L
 ) {
 
   check_position(position, theta = FALSE, inside = TRUE, allow_null = TRUE)
   check_argmatch(direction, c("horizontal", "vertical"), allow_null = TRUE)
   check_bool(swap)
+  check_list_of(
+    subtitle_position,
+    element_classes("text", "blank"),
+    allow_null = TRUE
+  )
+  check_length(subtitle_position, exact = 4L, allow_null = TRUE)
+  check_inherits(
+    col_text, element_classes("text", "blank"),
+    allow_null = TRUE
+  )
 
   if (length(reverse) == 1L) {
     check_bool(reverse)
   } else {
-    check_length(reverse, exact = 2)
-    check_bool(reverse[1])
-    check_bool(reverse[2])
+    check_length(reverse, exact = 2L)
+    check_bool(reverse[1L])
+    check_bool(reverse[2L])
   }
 
   dim_order <- if (swap) c("col", "row") else c("row", "col")
@@ -90,8 +157,11 @@ guide_legend_cross <- function(
   new_guide(
     key = key,
     title = title,
+    row_title = row_title,
+    col_title = col_title,
     dim_order = dim_order,
     override.aes = rename_aes(override.aes),
+    subtitle_position = subtitle_position,
     col_text = col_text,
     reverse = reverse,
     theme = theme,
@@ -102,6 +172,8 @@ guide_legend_cross <- function(
   )
 }
 
+
+
 # Class -------------------------------------------------------------------
 
 GuideLegendCross <- ggproto(
@@ -110,11 +182,18 @@ GuideLegendCross <- ggproto(
 
   params = new_params(
     override.aes = list(), reverse = FALSE,
+    row_title = waiver(), col_title = waiver(),
     key = NULL, dim_order = c("row", "col"),
+    subtitle_position = list(),
     col_text = NULL
   ),
 
   hashables = exprs(title, "GuideLegendCross"),
+
+  elements = list2(
+    !!!GuideLegendBase$elements,
+    subtitle = "legendry.legend.subtitle"
+  ),
 
   extract_key = function(scale, aesthetic, key = NULL,
                          dim_order = c("row", "col"), ...) {
@@ -129,8 +208,8 @@ GuideLegendCross <- ggproto(
     }
 
     # Start filling in layout, to be finalised later
-    row  <- unique0(key[grouping[dim_order == "row"]][[1]])
-    col  <- unique0(key[grouping[dim_order == "col"]][[1]])
+    row  <- unique0(key[grouping[dim_order == "row"]][[1L]])
+    col  <- unique0(key[grouping[dim_order == "col"]][[1L]])
     grid <- vec_expand_grid(row = row, col = col)
 
     # Repeat key to match layout
@@ -160,6 +239,9 @@ GuideLegendCross <- ggproto(
       params$key <- cross_merge_partial(old_key, new_key)
     }
 
+    params$row_title <- params$row_title %|W|% new_params$row_title
+    params$col_title <- params$col_title %|W|% new_params$col_title
+
     params$override.aes <-
       merge_legend_override(params$override.aes, new_params$override.aes)
     list(guide = self, params = params)
@@ -172,14 +254,14 @@ GuideLegendCross <- ggproto(
 
     key$.index <- vec_seq_along(key)
     key$.row <- match_self(key$.row_label %||% seq_len(n_breaks))
-    key$.col <- match_self(key$.col_label %||% rep_len(1, n_breaks))
+    key$.col <- match_self(key$.col_label %||% rep_len(1L, n_breaks))
 
     reverse <- rep_len(params$reverse, 2L)
-    if (reverse[1]) {
+    if (reverse[1L]) {
       nrows <- max(key$.row, na.rm = TRUE)
       key$.row <- nrows - key$.row + 1L
     }
-    if (reverse[2]) {
+    if (reverse[2L]) {
       ncols <- max(key$.col, na.rm = TRUE)
       key$.col <- ncols - key$.col + 1L
     }
@@ -199,8 +281,8 @@ GuideLegendCross <- ggproto(
     elements$title <- setup_legend_title(theme, title_position)
 
     # Resolve text positions
-    row <- intersect(c("right", "left"), text_position)[1] %|NA|% "right"
-    col <- intersect(c("top", "bottom"), text_position)[1] %|NA|% "bottom"
+    row <- intersect(c("right", "left"), text_position)[1L] %|NA|% "right"
+    col <- intersect(c("top", "bottom"), text_position)[1L] %|NA|% "bottom"
 
     # Resolve text theming
     elements$text_row <- setup_legend_text(theme, row)
@@ -208,6 +290,28 @@ GuideLegendCross <- ggproto(
       params$col_text,
       setup_legend_text(theme, col)
     )
+
+    if (!is.null(params$row_title %|W|% NULL)) {
+      elements$subtitle_row <- combine_elements(
+        switch(
+          row,
+          right = params$subtitle_position[["right"]],
+          params$subtitle_position[["left"]]
+        ),
+        setup_legend_title(theme, row, element = elements$subtitle)
+      )
+    }
+
+    if (!is.null(params$col_title %|W|% NULL)) {
+      elements$subtitle_col <- combine_elements(
+        switch(
+          col,
+          top = params$subtitle_position[["top"]],
+          params$subtitle_position[["bottom"]]
+        ),
+        setup_legend_title(theme, col, element = elements$subtitle)
+      )
+    }
 
     elements <- Guide$setup_elements(params, elements, theme)
     elements[c("row_position", "col_position")] <- list(row, col)
@@ -220,15 +324,34 @@ GuideLegendCross <- ggproto(
     # Render row labels first
     rows <- vec_slice(key, !duplicated(key$.row))
     rows$.label <- rows$.row_label %||% rows[[".label"]]
-    rows <- GuideLegendBase$build_labels(rows, list(text = elements[["text_row"]]), params)
+    elem <- list(text = elements[["text_row"]])
+    rows <- GuideLegendBase$build_labels(rows, elem, params)
 
     # Then column labels follow
     cols <- vec_slice(key, !duplicated(key$.col))
     cols$.label <- cols$.col_label %||% cols[[".label"]]
-    cols <- GuideLegendBase$build_labels(cols, list(text = elements[["text_col"]]), params)
+    elem <- list(text = elements[["text_col"]])
+    cols <- GuideLegendBase$build_labels(cols, elem, params)
 
     # We don't combine them yet, as they need to be measured separately later
     list(rows = rows, cols = cols)
+  },
+
+  build_title = function(label, elements, params) {
+    main <- GuideLegend$build_title(label, elements, params)
+    row <- element_grob(
+      elements$subtitle_row %||% element_blank(),
+      label = params$row_title,
+      margin_x = TRUE,
+      margin_y = TRUE
+    )
+    col <- element_grob(
+      elements$subtitle_col %||% element_blank(),
+      label = params$col_title,
+      margin_x = TRUE,
+      margin_y = TRUE
+    )
+    list(main = main, col = col, row = row)
   },
 
   measure_grobs = function(grobs, params, elements) {
@@ -240,7 +363,7 @@ GuideLegendCross <- ggproto(
 
     # Weave in width of labels
     widths <- pmax(widths, width_cm(grobs$labels$cols))
-    widths <- vec_interleave(elements$spacing_x %||% 0, widths)[-1]
+    widths <- vec_interleave(elements$spacing_x %||% 0.0, widths)[-1L]
     label_width <- max(width_cm(grobs$labels$rows))
     widths <- switch(
       elements$row_position,
@@ -255,7 +378,7 @@ GuideLegendCross <- ggproto(
 
     # Weave in heights of labels
     heights <- pmax(heights, height_cm(grobs$labels$rows))
-    heights <- vec_interleave(elements$spacing_y %||% 0, heights)[-1]
+    heights <- vec_interleave(elements$spacing_y %||% 0.0, heights)[-1L]
     label_height <- max(height_cm(grobs$labels$cols))
     heights <- switch(
       elements$col_position,
@@ -269,20 +392,20 @@ GuideLegendCross <- ggproto(
   arrange_layout = function(key, sizes, params, elements) {
 
     # Account for spacing in between keys
-    key_row <- key[[".row"]] * 2 - 1
-    key_col <- key[[".col"]] * 2 - 1
+    key_row <- key[[".row"]] * 2L - 1L
+    key_col <- key[[".col"]] * 2L - 1L
 
-    lab_row <- max(key_row) + 1
-    lab_col <- max(key_col) + 1
+    lab_row <- max(key_row) + 1L
+    lab_col <- max(key_col) + 1L
 
     if (elements$row_position == "left") {
-      key_col <- key_col + 1
-      lab_col <- 1
+      key_col <- key_col + 1L
+      lab_col <- 1L
     }
 
     if (elements$col_position == "top") {
-      key_row <- key_row + 1
-      lab_row <- 1
+      key_row <- key_row + 1L
+      lab_row <- 1L
     }
 
     cols <- unique(key_col)
@@ -298,11 +421,214 @@ GuideLegendCross <- ggproto(
   },
 
   assemble_drawing = function(self, grobs, layout, sizes, params, elements) {
+
+    widths <- unit(sizes$widths, "cm")
+    if (isTRUE(elements$stretch_x)) {
+      widths[unique0(layout$key_col)] <- elements$key_width
+    }
+
+    heights <- unit(sizes$heights, "cm")
+    if (isTRUE(elements$stretch_y)) {
+      heights[unique0(layout$key_row)] <- elements$key_height
+    }
+
+    gt <- gtable(widths = widths, heights = heights)
+
+    # Add keys
+    if (!is_zero(grobs$decor)) {
+      gt <- gtable_add_grob(
+        gt, grobs$decor,
+        name = names(grobs$decor),
+        clip = "off",
+        t = layout$key_row, r = layout$key_col,
+        b = layout$key_row, l = layout$key_col
+      )
+    }
+
+    # Add labels
     grobs$labels <- c(grobs$labels$rows, grobs$labels$cols)
-    GuideLegendBase$assemble_drawing(grobs, layout, sizes, params, elements)
+    if (!is_zero(grobs$labels)) {
+      gt <- gtable_add_grob(
+        gt, grobs$labels,
+        name = paste("label", layout$label_row, layout$label_col, sep = "-"),
+        clip = "off",
+        t = layout$label_row, r = layout$label_col,
+        b = layout$label_row, l = layout$label_col
+      )
+    }
+
+    # Add row title
+    if (!is_zero(grobs$title$row)) {
+      row_size <- unit(width_cm(grobs$title$row), "cm")
+      place <- switch(elements$row_position, right = c(-1L, -1L), c(0L, 1L))
+      gt <- gtable_add_cols(gt, row_size, pos = place[1L])
+      gt <- gtable_add_grob(
+        gt, grobs$title$row,
+        name = "row-subtitle", clip = "off",
+        t = min(layout$key_row),
+        b = max(layout$key_row),
+        l = place[2L], r = place[2L]
+      )
+      if (elements$row_position == "left") {
+        # Account that we've added a column in front.
+        # Needed for accurate placement of column subtitle.
+        layout$key_col <- layout$key_col + 1L
+      }
+    }
+
+    # Add col title
+    if (!is_zero(grobs$title$col)) {
+      col_size <- unit(height_cm(grobs$title$col), "cm")
+      place <- switch(elements$col_position, top = c(0L, 1L), c(-1L, -1L))
+      gt <- gtable_add_rows(gt, col_size, pos = place[1L])
+      gt <- gtable_add_grob(
+        gt, grobs$title$col,
+        name = "col-subtitle", clip = "off",
+        t = place[2L], b = place[2L],
+        l = min(layout$key_col),
+        r = max(layout$key_col)
+      )
+      if (elements$col_position == "top") {
+        # Account that we've added a row on top.
+        # Needed for accurate placement of column subtitle.
+        layout$key_row <- layout$key_row + 1L
+      }
+    }
+
+    # Increase size if titles are large
+    if (!is_zero(grobs$title$col)) {
+      title_width <- width_cm(grobs$title$col)
+
+      # Compute excess title width
+      widths <- width_cm(gt$widths)
+      i <- range(layout$key_col)
+      key_width <- sum(widths[i[1L]:i[2L]])
+      excess_width <- title_width - key_width
+
+      if (excess_width > 0.0) {
+        just <- rotate_just(element = elements$subtitle_col)$hjust
+
+        # Find out how much space needs to added to the right
+        right_width <- sum(after(widths, i[2L]))
+        right_width <- pmax(((1.0 - just) * excess_width) - right_width, 0.0)
+
+        # Find out how much space needs to added to the left
+        left_width <- sum(before(widths, i[1L]))
+        left_width <- pmax((just * excess_width) - left_width, 0.0)
+
+        # Add actual space
+        gt <- gtable_add_cols(gt, unit(right_width, "cm"), pos = -1L)
+        gt <- gtable_add_cols(gt, unit(left_width,  "cm"), pos = 0L)
+      }
+    }
+
+    # Increase size if titles are large
+    if (!is_zero(grobs$title$row)) {
+      title_height <- height_cm(grobs$title$row)
+
+      # Compute excess title height
+      heights <- height_cm(gt$heights)
+      i <- range(layout$key_row)
+      key_height <- sum(heights[i[1L]:i[2L]])
+      excess_height <- title_height - key_height
+
+      if (excess_height > 0.0) {
+        just <- rotate_just(element = elements$subtitle_row)$vjust
+
+        # Find out how much space needs to added on top
+        top_height <- sum(before(heights, i[1L]))
+        top_height <- pmax(((1.0 - just) * excess_height) - top_height, 0.0)
+
+        # Find out how much space needs to added on the bottom
+        bottom_height <- sum(after(heights, i[2L]))
+        bottom_height <- pmax((just * excess_height) - bottom_height, 0.0)
+
+        # Add actual space
+        gt <- gtable_add_rows(gt, unit(bottom_height, "cm"), pos = -1L)
+        gt <- gtable_add_rows(gt, unit(top_height, "cm"), pos = 0L)
+      }
+    }
+
+    gt <- self$add_title(
+      gt, grobs$title$main, elements$title_position,
+      rotate_just(element = elements$title)
+    )
+
+    # Add padding and background
+    gt <- gtable_add_padding(gt, unit(elements$padding, "cm"))
+    if (!is_zero(elements$background)) {
+      gt <- gtable_add_grob(
+        gt, elements$background,
+        name = "background", clip = "off",
+        t = 1L, r = -1L, b = -1L, l = 1L, z = -Inf
+      )
+    }
+    gt
   }
 )
 
+# Public helpers ----------------------------------------------------------
+
+#' Helper to position text
+#'
+#' This is a helper function for use in [`guide_legend_cross()`]. It creates
+#' a list of text elements, each corresponding the top, right, bottom or left
+#' positions. Input is given for that order as well.
+#'
+#' @param angle A `<numeric[1-4]>` value setting the angle of the text.
+#' @param hjust,vjust A `<numeric[1-4]>` between 0 and 1 to set the horizontal
+#'   justification (`hjust`) or vertical justification (`vjust`) for the text.
+#' @param ... Other arguments passed to the `element` function.
+#' @param element An `<function>` creating an object that inherits from the
+#'   [`<element_text>`][ggplot2::element_text] class.
+#'
+#' @details
+#' Input other than the `element` argument will be recycled to length 4. `NA`
+#' and 0-length input will be dropped.
+#'
+#' @returns A named list of `element` objects of length 4. The list has the
+#'   names `"top"`, `"right"`, `"bottom"` and `"left"`.
+#' @export
+#'
+#' @examples
+#' # Red text turning along with position
+#' position_text(angle = c(0, -90, 180, 90), colour = "red")
+position_text <- function(
+  angle = NA,
+  hjust = NA,
+  vjust = NA,
+  ...,
+  element = element_text
+) {
+
+  input <- list2(angle = angle, hjust = hjust, vjust = vjust, ...)
+
+  # Check for invalid arguments
+  nms <- names(input)
+  extra <- setdiff(nms, fn_fmls_names(element))
+  if (length(extra) > 0L) {
+    cli::cli_warn(
+      "Unknown argument{?/s}: {.and {.arg {extra}}}",
+      call = current_call()
+    )
+    input <- input[setdiff(nms, extra)]
+  }
+
+  input <- input[lengths(input) > 0L]
+  input <- data_frame0(!!!lapply(input, rep, length.out = 4L))
+
+  output <- lapply(vec_seq_along(input), function(i) {
+    args  <- as.list(vec_slice(input, i))
+    valid <- !map_lgl(args, function(x) is.null(x) || is.na(x))
+    if (is.list(args$margin) && is_margin(args$margin[[1L]])) {
+      args$margin <- args$margin[[1L]]
+    }
+    args  <- args[valid]
+    inject(element(!!!args))
+  })
+  names(output) <- .trbl
+  output
+}
 
 # Helpers -----------------------------------------------------------------
 
@@ -324,7 +650,7 @@ cross_merge_partial <- function(old, new) {
   row_match <- match(old$.row_label, new$.label)
   col_match <- match(old$.col_label, new$.label)
 
-  index <- if (!anyNA(row_match)) row_match else col_match
+  index <- if (anyNA(row_match)) col_match else row_match
   if (anyNA(index)) {
     old_aes <- colnames(old)[!startsWith(colnames(old), ".")]
     cli::cli_abort(c(
@@ -350,8 +676,8 @@ cross_merge_incomplete <- function(old, new, order = c("row", "col")) {
   new <- vec_slice(new, grid$new)
 
   order <- paste0(".", order, "_label")
-  old[order[1]] <- old$.label
-  new[order[2]] <- new$.label
+  old[order[1L]] <- old$.label
+  new[order[2L]] <- new$.label
   data_frame0(!!!defaults(old, new))
 }
 

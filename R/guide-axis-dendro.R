@@ -19,6 +19,34 @@
 #' * A `<function>` that returns a `<Guide>` class object.
 #' * A `<character[1]>` naming such a function, without the `guide_` or
 #'   `primitive_` prefix.
+#'
+#' @details
+#' ## Styling options
+#'
+#' Because this guide is pure composite guide, the [theme][ggplot2::theme]
+#' options that govern the styling are determined by its constituents. They are
+#' linked below so you can find their 'Styling options' sections.
+#'
+#' | **Primitive** | **Description** |
+#' | ------------- | --------------- |
+#' | [`compose_stack`] | Stacks the lines, tick marks and labels and dendrogram. |
+#' | [`primitive_segments()`] | The dendrogram. |
+#' | [`primitive_line()`] | Makes up the axis line. |
+#' | [`primitive_ticks()`] | Makes up the tick marks. |
+#' | [`primitive_labels()`] | Makes up the labels. |
+#'
+#' The context-agnostic alternative to using `theme()` is to use
+#' [`theme_guide()`]:
+#'
+#' ```r
+#' guide_axis_dendro(theme = theme_guide(
+#'   line = element_line(),
+#'   text = element_text(),
+#'   ticks = element_line(),
+#'   ticks.length = unit(5, "mm"),
+#' ))
+#' ```
+#'
 #' @return A `<Guide>` object.
 #' @export
 #' @family standalone guides
@@ -36,7 +64,8 @@
 #' p + guides(y = guide_axis_dendro(clust))
 #'
 #' # Adding ticks and axis line
-#' p + guides(y = guide_axis_dendro(clust, ticks = "ticks", axis_line = "line")) +
+#' p +
+#'   guides(y = guide_axis_dendro(clust, ticks = "ticks", axis_line = "line")) +
 #'   theme(axis.line = element_line())
 #'
 #' # Controlling space allocated to dendrogram
@@ -47,15 +76,15 @@
 #' p + guides(y = guide_axis_dendro(clust, labels = FALSE), y.sec = "axis")
 guide_axis_dendro <- function(
   key = "dendro", title = waiver(), theme = NULL,
-  labels = TRUE, space = rel(10), vanish = TRUE,
-  n.dodge = 1, angle = waiver(), check.overlap = FALSE,
+  labels = TRUE, space = rel(10.0), vanish = TRUE,
+  n.dodge = 1L, angle = waiver(), check.overlap = FALSE,
   ticks = "none", axis_line = "none",
-  order = 0, position = waiver()
+  order = 0L, position = waiver()
 ) {
 
   theme <- replace_null(
     theme %||% theme(),
-    legendry.guide.spacing = unit(0, "cm")
+    legendry.guide.spacing = unit(0.0, "cm")
   )
 
   if (isTRUE(labels)) {
@@ -72,7 +101,7 @@ guide_axis_dendro <- function(
   } else if (isFALSE(ticks)) {
     ticks <- "none"
   }
-  if(isTRUE(axis_line)) {
+  if (isTRUE(axis_line)) {
     axis_line <- primitive_line()
   } else if (isFALSE(axis_line)) {
     axis_line <- "none"

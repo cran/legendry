@@ -3,8 +3,6 @@
 #' Guide composition
 #'
 #' @description
-#' `r lifecycle::badge("experimental")`
-#'
 #' Guide composition is a meta-guide orchestrating an ensemble of other guides.
 #' On their own, a 'composing' guide is not very useful as a visual reflection
 #' of a scale.
@@ -24,6 +22,18 @@
 #' @param super A `<Compose>` class object giving a meta-guide for composition.
 #' @param call A [call][rlang::topic-error-call] to display in messages.
 #'
+#' @details
+#' ## Styling options
+#'
+#' Below are the [theme][ggplot2::theme] options that determine the styling of
+#' this guide.
+#'
+#' | **Theme setting** | **Type** | **Description** |
+#' | ----------------- | -------- | --------------- |
+#' | `legendry.guide.spacing` | [`unit()`] | Spacing between guides. |
+#'
+#' There are no further styling options.
+#'
 #' @name guide-composition
 #' @return A `<Compose>` (sub-)class guide that composes other guides.
 #' @export
@@ -40,7 +50,7 @@ new_compose <- function(guides, args = list(), ...,
                         call = caller_env(), super = Compose) {
 
   guides <- lapply(guides, validate_guide, args = args, call = call)
-  if (length(guides) < 1) {
+  if (length(guides) < 1L) {
     cli::cli_abort("There must be at least one guide to compose.", call = call)
   }
 
@@ -74,14 +84,14 @@ Compose <- ggproto(
 
   train = function(self, params = self$params, scale, aesthetic = NULL,
                    title = waiver(), ...) {
-    title <- scale$make_title(params$title %|W|% scale$name %|W|% title)
+    title <- scale$make_title(params$title, scale$name, title)
     position  <- params$position  <- params$position %|W|% NULL
-    aesthetic <- params$aesthetic <- aesthetic %||% scale$aesthetics[1]
+    aesthetic <- params$aesthetic <- aesthetic %||% scale$aesthetics[1L]
     check_position(position, inside = TRUE, allow_null = TRUE)
 
     key <- resolve_key(params$key, allow_null = TRUE)
     if (is.function(key)) {
-      key <- key(scale, aesthetic %||% scale$aesthetics[1])
+      key <- key(scale, aesthetic %||% scale$aesthetics[1L])
     }
     params$key <- NULL
     any_title <- FALSE
@@ -102,6 +112,7 @@ Compose <- ggproto(
         params = guide_params[[i]], scale = scale, aesthetic = aesthetic,
         title = guide_title, ...
       )
+      guide_params[[i]]$title <- guide_params[[i]]$title %|W|% NULL
     }
     if (any_title) {
       params$title <- NULL
@@ -152,7 +163,7 @@ compatible_aes <- function(guides, available_aes, call = caller_env()) {
   available <- lapply(guides[valid], `[[`, name = "available_aes")
   common <- Reduce(any_intersect, available)
 
-  if (length(common) < 1) {
+  if (length(common) < 1L) {
     cli::cli_abort(
       "The guides to combine have no shared {.field available aesthetics}.",
       call = call
@@ -160,7 +171,7 @@ compatible_aes <- function(guides, available_aes, call = caller_env()) {
   }
   if (!is.null(available_aes)) {
     common <- any_intersect(available_aes, common)
-    if (length(common) < 1) {
+    if (length(common) < 1L) {
       cli::cli_abort(c(
         "The guides have incompatible {.arg available_aes} settings.",
         "They must include {.or {.val {available_aes}}}."
@@ -175,7 +186,7 @@ any_intersect <- function(x, y) {
     x <- union(x, setdiff(y, c("x", "y", "r", "theta")))
   }
   if ("any" %in% y) {
-    y <- union(y, setdiff(x, c("x", "y", "r", 'theta')))
+    y <- union(y, setdiff(x, c("x", "y", "r", "theta")))
   }
   intersect(x, y)
 }
@@ -184,10 +195,16 @@ validate_guide <- function(guide, args = list(), env = global_env(),
                            call = caller_env()) {
   input <- guide
   if (is.character(guide)) {
-    guide <- find_global(paste0("guide_", input), env = env, mode = "function")
+    guide <- find_global(
+      paste0("guide_", input),
+      env = env, mode = "function"
+    )
   }
   if (is.null(guide) && is.character(input)) {
-    guide <- find_global(paste0("primitive_", input), env = env, mode = "function")
+    guide <- find_global(
+      paste0("primitive_", input),
+      env = env, mode = "function"
+    )
   }
   if (is.function(guide)) {
     args  <- args[intersect(names(args), fn_fmls_names(guide))]
@@ -201,11 +218,11 @@ validate_guide <- function(guide, args = list(), env = global_env(),
 
 accumulate_limits <- function(...) {
   args <- list2(...)
-  args <- args[lengths(args) > 0]
-  if (length(args) == 0) {
+  args <- args[lengths(args) > 0L]
+  if (length(args) == 0L) {
     return(NULL)
   }
-  if (is.character(args[[1]])) {
+  if (is.character(args[[1L]])) {
     unique(unlist(args))
   } else {
     inject(range(!!!args, na.rm = TRUE))
@@ -223,7 +240,8 @@ get_limits <- function(params) {
 
 set_limits <- function(params, limits) {
   if ("guide_params" %in% names(params)) {
-    params$guide_params <- lapply(params$guide_params, set_limits, limits = limits)
+    params$guide_params <-
+      lapply(params$guide_params, set_limits, limits = limits)
   }
   params$limits <- limits
   params

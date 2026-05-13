@@ -28,9 +28,19 @@
 #' @param data A `<data.frame>` or similar object coerced by
 #'   [`fortify()`][ggplot2::fortify] to a `<data.frame>`, in which the `mapping`
 #'   argument is evaluated.
-#' @param ... [`<data-masking>`][rlang::topic-data-mask] A set of mappings
-#'   similar to those provided to [`aes()`][ggplot2::aes], which will be
-#'   evaluated in the `data` argument. These must contain `aesthetic` mapping.
+#' @param ...
+#' The `...` parameter has two purposes.
+#' 1. In `key_map()` it is [`<data-masking>`][rlang::topic-data-mask]. A set of
+#'   mappings similar to those provided to [`aes()`][ggplot2::aes], which will
+#'   be evaluated in the `data` argument. These must contain `aesthetic`
+#'   mapping.
+#' 2. In other keys, `...` can be used to transfer graphical properties to the
+#'   individual breaks of a guide. For example, using `colour = "blue"` will
+#'   draw parts of the guides associated with breaks in blue. There is a shallow
+#'   hierarchy in that `text_colour`, `line_colour`, `rect_colour` and
+#'   `point_colour` are the specific properties for elements, but all inherit
+#'   from the main `colour` setting. Likewise, `size`, `linewidth`, `linetype`
+#'   and `fill` have specific variants for elements.
 #' @param labeller A `<function>` that receives major breaks and returns
 #'   formatted labels. For `key_log()`, `NULL` will default to
 #'   [`scales::label_log()`] for strictly positive numbers and a custom labeller
@@ -40,14 +50,15 @@
 #'   transformation to calculate positions. It is only advisable to set the
 #'   `prescale_base` argument when the data have already been log-transformed.
 #'   When using a log-transform in the scale or in
-#'   [`coord_transform()`][ggplot2::coord_transform], the default `NULL` is recommended.
+#'   [`coord_transform()`][ggplot2::coord_transform], the default `NULL` is
+#'   recommended.
 #' @param negative_small A `<numeric[1]>` setting the smallest absolute value
 #'   that is marked with a tick in case the scale limits include 0 or negative
 #'   numbers.
 #' @param expanded A `<logical[1]>` determining whether the ticks should cover
 #'   the entire range after scale expansion (`TRUE`, default), or be restricted
 #'   to the scale limits (`FALSE`).
-#' @param .call A [call][rlang::topic-error-call] to display in messages.
+#' @param call A [call][rlang::topic-error-call] to display in messages.
 #'
 #' @name key_standard
 #' @family keys
@@ -83,11 +94,12 @@ NULL
 
 #' @rdname key_standard
 #' @export
-key_auto <- function(...) {
+key_auto <- function(..., call = NULL) {
+  call <- call %||% current_call()
   function(scale, aesthetic = NULL) {
-    aesthetic <- aesthetic %||% scale$aesthetics[1]
+    aesthetic <- aesthetic %||% scale$aesthetics[1L]
     df <- Guide$extract_key(scale, aesthetic)
-    df <- data_frame0(df, !!!extra_args(...))
+    df <- data_frame0(df, !!!extra_args(...), .error_call = call)
     class(df) <- c("key_standard", "key_guide", class(df))
     df
   }
@@ -97,9 +109,12 @@ key_auto <- function(...) {
 #' @export
 key_manual <- function(aesthetic, value = aesthetic,
                        label = as.character(value), type = NULL,
-                       ...) {
-  df <- data_frame0(aesthetic = aesthetic, value = value,
-                    label = label, type = type, !!!extra_args(...))
+                       ..., call = NULL) {
+  df <- data_frame0(
+    aesthetic = aesthetic, value = value,
+    label = label, type = type, !!!extra_args(...),
+    .error_call = call %||% current_call()
+  )
   check_columns(df, c("aesthetic", "value", "label"))
   df <- rename(df, c("value", "label", "type"), c(".value", ".label", ".type"))
   class(df) <- c("key_standard", "key_guide", class(df))
@@ -108,14 +123,15 @@ key_manual <- function(aesthetic, value = aesthetic,
 
 #' @rdname key_standard
 #' @export
-key_map <- function(data, ..., .call = caller_env()) {
+key_map <- function(data, ..., call = NULL) {
   mapping <- aes(!!!enquos(...))
 
   df <- eval_aes(
     data, mapping,
-    required = c("aesthetic"),
-    optional = c("value", "label", .label_params),
-    call = .call, arg_mapping = "mapping", arg_data = "data"
+    required = "aesthetic",
+    optional = c("value", "label", .element_params),
+    call = call %||% current_call(),
+    arg_mapping = "mapping", arg_data = "data"
   )
   df$value <- df$value %||% df$aesthetic
   df$label <- df$label %||% as.character(df$aesthetic)
@@ -133,12 +149,13 @@ key_map <- function(data, ..., .call = caller_env()) {
 
 #' @rdname key_standard
 #' @export
-key_minor <- function(...) {
+key_minor <- function(..., call = NULL) {
+  call <- call %||% current_call()
   dots <- extra_args(...)
   function(scale, aesthetic = NULL) {
-    aesthetic <- aesthetic %||% scale$aesthetics[1]
+    aesthetic <- aesthetic %||% scale$aesthetics[1L]
     df <- GuideAxis$extract_key(scale, aesthetic, minor.ticks = TRUE)
-    df <- data_frame0(df, !!!dots)
+    df <- data_frame0(df, !!!dots, .error_call = call)
     class(df) <- c("key_standard", "key_guide", class(df))
     df
   }
@@ -148,7 +165,7 @@ key_minor <- function(...) {
 #' @export
 key_log <- function(
   prescale_base = NULL, negative_small = 0.1, expanded = TRUE,
-  labeller = NULL, ...
+  labeller = NULL, ..., call = NULL
 ) {
   check_number_decimal(
     negative_small, min = 1e-100,
@@ -162,9 +179,9 @@ key_log <- function(
   force(negative_small)
   force(expanded)
   dots <- extra_args(...)
-  call <- expr(key_log())
+  call <- call %||% current_call()
   function(scale, aesthetic = NULL) {
-    key <- log10_keys(
+    log10_keys(
       scale = scale, aesthetic = aesthetic,
       prescale_base = prescale_base,
       negative_small = negative_small,
@@ -232,7 +249,7 @@ log10_keys <- function(scale, aesthetic,
                        labeller = NULL,
                        extra_args = NULL,
                        call = caller_env()) {
-  aesthetic <- aesthetic %||% scale$aesthetics[1]
+  aesthetic <- aesthetic %||% scale$aesthetics[1L]
   if (scale$is_discrete()) {
     cli::cli_abort(
       "Cannot calculate logarithmic ticks for discrete scales.",
@@ -252,24 +269,24 @@ log10_keys <- function(scale, aesthetic,
   }
 
   limits <- transform$inverse(scale$get_limits())
-  has_negatives <- any(limits <= 0)
+  has_negatives <- any(limits <= 0.0)
 
-  if (!has_negatives) {
-    start <- floor(log10(min(limits))) - 1L
-    end   <- ceiling(log10(max(limits))) + 1L
-  } else {
+  if (has_negatives) {
     negative_small <- negative_small %||% 0.1
     start <- floor(log10(abs(negative_small)))
     end   <- ceiling(log10(max(abs(limits)))) + 1L
+  } else {
+    start <- floor(log10(min(limits))) - 1L
+    end   <- ceiling(log10(max(limits))) + 1L
   }
 
-  tens  <- 10^seq(start, end, by = 1)
-  fives <- tens * 5
-  ones  <- as.vector(outer(setdiff(2:9, 5), tens))
+  tens  <- 10L^seq(start, end, by = 1L)
+  fives <- tens * 5L
+  ones  <- as.vector(outer(setdiff(2L:9L, 5L), tens))
 
   if (has_negatives) {
     tens  <- tens[tens >= negative_small]
-    tens  <- c(tens, -tens, 0)
+    tens  <- c(tens, -tens, 0.0)
     fives <- fives[fives >= negative_small]
     fives <- c(fives, -fives)
     ones  <- ones[ones >= negative_small]
@@ -308,7 +325,7 @@ log10_keys <- function(scale, aesthetic,
 }
 
 negative_log_label <- function(x) {
-  if (length(x) == 0) {
+  if (length(x) == 0L) {
     return(expression)
   }
   sign <- as.character(sign(x))
@@ -317,14 +334,14 @@ negative_log_label <- function(x) {
   sign[sign == "0"] <- ""
 
   abs <- abs(x)
-  exponent <- format(log(abs, base = 10), digits = 3)
-  text <- paste0(sign, 10, "^", exponent)
-  text[x == 0] <- "0"
+  exponent <- format(log(abs, base = 10.0), digits = 3L)
+  text <- paste0(sign, 10L, "^", exponent)
+  text[x == 0.0] <- "0"
 
   out <- vector("expression", length(text))
   for (i in seq_along(text)) {
     expr <- parse(text = text[[i]])
-    out[[i]] <- if (length(expr) == 0) NA else expr[[1]]
+    out[[i]] <- if (length(expr) == 0L) NA else expr[[1L]]
   }
   out[is.na(x)] <- NA
   out
@@ -339,8 +356,12 @@ transform_key <- function(key, position, coord, panel_params) {
   transformed <- coord$transform(key, panel_params)
 
   if (is_theta(position)) {
-    add <- if (position == "theta.sec") pi else 0
+    add <- if (position == "theta.sec") pi else 0.0
     transformed$theta <- transformed$theta + add
+  } else if ("theta" %in% setdiff(names(transformed), names(key))) {
+    # For radius axes, we want to keep any `theta` value it had before,
+    # but discard these when the coord forces this.
+    transformed[c("theta", "r")] <- NULL
   }
 
   ends <- c("xend", "yend") %in% names(key)
@@ -348,20 +369,20 @@ transform_key <- function(key, position, coord, panel_params) {
     return(transformed)
   }
 
-  if (ends[1]) {
+  if (ends[1L]) {
     key <- rename(key, c("x", "xend"), rev)
   }
-  if (ends[2]) {
+  if (ends[2L]) {
     key <- rename(key, c("y", "yend"), rev)
   }
   key <- coord$transform(key, panel_params)
   if (is_theta(position)) {
     transformed$thetaend <- key$theta + add
   } else {
-    if (ends[1]) {
+    if (ends[1L]) {
       transformed$xend <- key$x
     }
-    if (ends[2]) {
+    if (ends[2L]) {
       transformed$yend <- key$y
     }
   }

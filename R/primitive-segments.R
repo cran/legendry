@@ -23,25 +23,36 @@
 #' @export
 #'
 #' @details
-#' # Styling options
+#' ## Styling options
 #'
-#' Below are the [theme][ggplot2::theme] options that determine the style of
-#' this guide, which may differ depending on whether the guide is used in an
-#' axis or in a legend context.
+#' Below are the [theme][ggplot2::theme] options that determine the styling of
+#' this guide, which may differ depending on whether the guide is used in
+#' an axis or in a legend context.
 #'
-#' ## As an axis guide
+#' The possible `{position}` suffixes mentioned below are `x`, `x.top`,
+#' `x.bottom`, `y`, `y.left`, `y.right`. The `theta` and `r` position suffixes
+#' in \pkg{ggplot2} are *not* obeyed in \pkg{legendry}.
 #'
-#' * `axis.ticks.{x/y}.{position}` an [`<element_line>`][ggplot2::element_line]
-#'   for display of the segments.
-#' * `axis.ticks.length.{x/y}.{position}` a [`<unit>`][grid::unit] for the
-#'   base size of the segments in the orthogonal direction.
+#' | **Theme setting** | **Context** | **Type** | **Description** |
+#' | ----------------- | ----------- | -------- | --------------- |
+#' | `axis.ticks.{position}` | Axis | [`element_line()`] | The line segments. |
+#' | `axis.ticks.length.{position}` | Axis | [`unit()`] | Basis for the `space` argument |
+#' | `legend.ticks` | Legend | [`element_line()`] | The line segments |
+#' | `legend.ticks.length` | Legend | [`unit()`] | Basis for the `space` argument |
 #'
-#' ## As a legend guide
+#' Styling options *per segment* can be set in the [segment key][key_segments].
+#' The `line` prefixed properties are prioritised for segments. These override
+#' theme settings.
 #'
-#' * `legend.ticks` an [`<element_line>`][ggplot2::element_line] for display
-#'   of the segments.
-#' * `legend.ticks.length` a [`<unit>`][grid::unit] for the
-#'   base size of the segments in the orthogonal direction.
+#' The context-agnostic alternative to using `theme()` is to use
+#' [`theme_guide()`]:
+#'
+#' ```r
+#' primitive_segments(theme = theme_guide(
+#'   ticks = element_line(),
+#'   ticks.length = unit(5, "mm")
+#' ))
+#' ```
 #'
 #' @examples
 #' # Building a key
@@ -58,7 +69,7 @@
 #'   scale_x_continuous(
 #'     guide = primitive_segments(key = key)
 #'   )
-primitive_segments <- function(key = NULL, space = rel(10), vanish = FALSE,
+primitive_segments <- function(key = NULL, space = rel(10.0), vanish = FALSE,
                                theme = NULL, position = waiver()) {
   check_unit(space, allow_rel = TRUE)
 
@@ -82,7 +93,7 @@ primitive_segments <- function(key = NULL, space = rel(10), vanish = FALSE,
 PrimitiveSegments <- ggproto(
   "PrimitiveSegments", Guide,
 
-  params = new_params(key = NULL, space = rel(10), vanish = FALSE),
+  params = new_params(key = NULL, space = rel(10.0), vanish = FALSE),
 
   hashables = exprs(key),
 
@@ -99,7 +110,7 @@ PrimitiveSegments <- ggproto(
     key <- params$key
     position <- params$position
     aesthetic <- params$aesthetic
-    mult <- 10
+    mult <- 10.0
 
     opposite <- setdiff(c("x", "y"), aesthetic)
     is_radius <- "theta.range" %in% names(panel_params) & !is_theta(position)
@@ -110,7 +121,7 @@ PrimitiveSegments <- ggproto(
       value <- rescale(value + 0.5, from = panel_params$bbox$x)
       key[[aesthetic]] <- value
       if (position == "left") {
-        key[[opposite]] <- 1 - key[[opposite]]
+        key[[opposite]] <- 1.0 - key[[opposite]]
       }
       if (aesthetic == "x") {
         key <- rename(key, c("x", "y"), c("y", "x"))
@@ -127,8 +138,8 @@ PrimitiveSegments <- ggproto(
     )
     range <- panel_params[[range]]
 
-    margin_lower <- function(value) range[1] - value * diff(range) / mult
-    margin_upper <- function(value) range[2] + value * diff(range) / mult
+    margin_lower <- function(value) range[1L] - value * diff(range) / mult
+    margin_upper <- function(value) range[2L] + value * diff(range) / mult
 
     key[[opposite]] <- switch(
       position,
@@ -141,7 +152,7 @@ PrimitiveSegments <- ggproto(
 
     key[[opposite]] <- switch(
       position,
-      left = , bottom = key[[opposite]] * mult + 1,
+      left = , bottom = key[[opposite]] * mult + 1.0,
       top = , right   = key[[opposite]] * mult - mult,
       key[[opposite]]
     )
@@ -152,11 +163,11 @@ PrimitiveSegments <- ggproto(
 
     radius <- panel_params$inner_radius
     if (position == "theta") {
-      key$adjust <- (key$r - radius[2]) * (2 * mult / radius[2])
-      key$r <- radius[2]
+      key$adjust <- (key$r - radius[2L]) * (2.0 * mult / radius[2L])
+      key$r <- radius[2L]
     } else {
-      key$adjust <- (key$r - radius[1]) / diff(radius) * -mult
-      key$r <- radius[1]
+      key$adjust <- (key$r - radius[1L]) / diff(radius) * -mult
+      key$r <- radius[1L]
     }
     bbox <- panel_params$bbox
     key$x <- rescale(key$r * sin(key$theta) + 0.5, from = bbox$x)
@@ -194,22 +205,26 @@ PrimitiveSegments <- ggproto(
       if (!vanish) {
         offset <- key$adjust * elements$size + offset
       }
-      if (any(offset != 0)) {
+      if (any(offset != 0.0)) {
         x <- x + unit(sin(theta) * offset, "cm")
         y <- y + unit(cos(theta) * offset, "cm")
       }
       if (vanish) {
-        cx <- unit(params$center[1] * key$adjust, "npc")
-        cy <- unit(params$center[2] * key$adjust, "npc")
-        x <- (x * (1 - key$adjust)) + cx
-        y <- (y * (1 - key$adjust)) + cy
+        cx <- unit(params$center[1L] * key$adjust, "npc")
+        cy <- unit(params$center[2L] * key$adjust, "npc")
+        x <- (x * (1.0 - key$adjust)) + cx
+        y <- (y * (1.0 - key$adjust)) + cy
       }
     }
 
-    element_grob(
+    group <- new_rle(key$group)
+    props <- element_key_properties(vec_slice(key, group$start), "line")
+
+    inject(element_grob(
       elements$line, x = x, y = y,
-      id.lengths = vec_run_sizes(key$group)
-    )
+      id.lengths = group$times,
+      !!!props
+    ))
   },
 
   draw = function(self, theme, position = NULL, direction = NULL,

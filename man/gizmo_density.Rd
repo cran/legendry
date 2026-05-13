@@ -46,7 +46,7 @@ for violin shapes.}
 \item{oob}{An out-of-bounds handling function that affects the cap colour.
 Can be one of the following:
 \itemize{
-\item A \verb{<function>} like \code{\link[scales:oob]{oob_squish}}.
+\item A \verb{<function>} like \code{\link[scales:oob_squish]{oob_squish}}.
 \item A \verb{<character[1]>} naming such a function without the '\code{oob}'-prefix,
 such as \code{"keep"}.
 }}
@@ -73,7 +73,33 @@ aesthetic is \code{colour} or \code{fill}, the shape will reflect this.
 }
 \details{
 Non-finite values such as \code{NA} and \code{NaN} are ignored while infinite values
-such as \code{-Inf} and \code{Inf} are \link[scales:oob]{squished} to the limits.
+such as \code{-Inf} and \code{Inf} are \link[scales:oob_squish]{squished} to the limits.
+\subsection{Styling options}{
+
+Below are the \link[ggplot2:theme]{theme} options that determine the styling of
+this guide.\tabular{lll}{
+   \strong{Theme setting} \tab \strong{Type} \tab \strong{Description} \cr
+   \code{legend.frame} \tab \code{\link[ggplot2:element_rect]{element_rect()}} \tab Outline drawn around the density itself. The \code{fill} setting is ignored. \cr
+   \code{legend.key} \tab \code{\link[ggplot2:element_rect]{element_rect()}} \tab Background underneath the density area. \cr
+   \code{legend.key.width} \tab \code{\link[=unit]{unit()}} \tab Width of the density area. \cr
+   \code{legend.key.height} \tab \code{\link[=unit]{unit()}} \tab Height of the density area. \cr
+}
+
+
+Please note that depending on the \code{direction} argument, the
+\code{legend.key.width}/\code{legend.key.height} setting are expanded 5-fold if
+originating from the global theme. To set these directly, you can use the
+local \code{theme} argument in the guide.
+These settings have shorthands in \code{\link[=theme_guide]{theme_guide()}}:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{gizmo_density(theme = theme_guide(
+  frame = element_rect(),
+  key = element_rect(),
+  key.width = unit(5, "mm")
+  key.height = unit(5, "cm")
+))
+}\if{html}{\out{</div>}}
+}
 }
 \examples{
 # A standard plot
@@ -97,10 +123,10 @@ p + guides(colour = gizmo_density(density = density(mpg$cty, adjust = 0.5)))
 p + guides(colour = gizmo_density(density.args = list(adjust = 0.5)))
 }
 \seealso{
-Other gizmos: 
-\code{\link{gizmo_barcap}()},
-\code{\link{gizmo_grob}()},
-\code{\link{gizmo_histogram}()},
-\code{\link{gizmo_stepcap}()}
+Other gizmos:
+\code{\link[=gizmo_barcap]{gizmo_barcap()}},
+\code{\link[=gizmo_grob]{gizmo_grob()}},
+\code{\link[=gizmo_histogram]{gizmo_histogram()}},
+\code{\link[=gizmo_stepcap]{gizmo_stepcap()}}
 }
 \concept{gizmos}

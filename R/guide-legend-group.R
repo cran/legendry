@@ -11,6 +11,55 @@
 #'   the legend layout. Either `nrow` or `ncol` can be set, but not both,
 #' @inheritParams common_parameters
 #'
+#' @details
+#' ## Styling options
+#'
+#' Below are the [theme][ggplot2::theme] options that determine the styling of
+#' this guide.
+#'
+#' | **Theme setting** | **Type** | **Description** |
+#' | ----------------- | -------- | --------------- |
+#' | `legendry.legend.subtitle` | [`element_text()`] | Title of groups in the legend. |
+#' | `legendry.legend.subtitle.position` | `<character[1]>` | One of `"top"`, `"right"`, `"bottom"` or `"left"`. |
+#' | `legendry.group.spacing` | [`unit()`] | Spacing in between groups of keys. |
+#' | `legend.background`| [`element_rect()`] | Background of the legend. |
+#' | `legend.margin` | [`margin()`] | Padding around the legend. |
+#' | `legend.text` | [`element_text()`] | Labels displayed next to keys. |
+#' | `legend.text.position` | `<character[1]>` | One of `"top"`, `"right"`, `"bottom"` or `"left"`. |
+#' | `legend.title` | [`element_text()`] | Title of the legend. |
+#' | `legend.title.position` | `<character[1]>` | One of `"top"`, `"right"`, `"bottom"` or `"left"`. |
+#' | `legend.key` | [`element_rect()`] | Background of the key areas. |
+#' | `legend.key.height` | [`unit()`] | Height of keys. |
+#' | `legend.key.width` | [`unit()`] | Width of keys. |
+#' | `legend.key.justification` | `<numeric[2]>` | Justification for placing legend keys in excess space. |
+#' | `legend.key.spacing.x` | [`unit()`] | Horizontal spacing between keys. |
+#' | `legend.key.spacing.y` | [`unit()`] | Vertical spacing between keys. Taken literally. |
+#' | `legend.byrow` | `<logical[1]>` | Row-order key filling (`TRUE`) or column-order (`FALSE`) |
+#'
+#' The context-agnostic alternative to using `theme()` is to use
+#' [`theme_guide()`]:
+#'
+#' ```r
+#' guide_legend_group(theme = theme_guide(
+#'   subtitle = element_text(),
+#'   subtitle.position = "top",
+#'   group.spacing = unit(5, "mm"),
+#'   text = element_text(),
+#'   text.position = "right",
+#'   title = element_text(),
+#'   title.position = "top",
+#'   key = element_rect(),
+#'   key.height = unit(5, "mm"),
+#'   key.width = unit(5, "mm"),
+#'   key.justification = c(0.5, 0.5),
+#'   key.spacing.x = unit(5, "mm"),
+#'   key.spacing.y = unit(5, "mm"),
+#'   byrow = TRUE,
+#'   margin = margin(5),
+#'   background = element_rect(),
+#' ))
+#' ```
+#'
 #' @return A `<GuideLegend>` object.
 #' @export
 #' @family standalone guides
@@ -64,13 +113,13 @@ guide_legend_group <- function(
   theme = NULL,
   position = NULL,
   direction = NULL,
-  order = 0
+  order = 0L
 ) {
 
   check_position(position, theta = FALSE, inside = TRUE, allow_null = TRUE)
   check_argmatch(direction, c("horizontal", "vertical"), allow_null = TRUE)
-  check_number_whole(nrow, min = 1, allow_null = TRUE)
-  check_number_whole(ncol, min = 1, allow_null = TRUE)
+  check_number_whole(nrow, min = 1.0, allow_null = TRUE)
+  check_number_whole(ncol, min = 1.0, allow_null = TRUE)
   check_exclusive(nrow, ncol)
 
   new_guide(
@@ -105,6 +154,15 @@ GuideLegendGroup <- ggproto(
     subtitle_position = "legendry.legend.subtitle.position"
   ),
 
+  # Typical legend + group column
+  hashables = exprs(title, key$.label, name, key$.group),
+
+  merge = function(self, params, new_guide, new_params) {
+    # The merge hashables guarantee group equality
+    new_params$key$.group <- NULL
+    ggproto_parent(GuideLegendBase, self)$merge(params, new_guide, new_params)
+  },
+
   setup_params = function(params) {
     params$direction <- direction <- arg_match0(
       params$direction,
@@ -135,7 +193,7 @@ GuideLegendGroup <- ggproto(
   override_elements = function(params, elements, theme) {
     elements <- GuideLegendBase$override_elements(params, elements, theme)
     elements$subtitle_spacing <- convertUnit(
-      elements$subtitle_spacing %||% unit(0, "cm"),
+      elements$subtitle_spacing %||% unit(0.0, "cm"),
       "cm", valueOnly = TRUE
     )
     elements
@@ -187,12 +245,12 @@ GuideLegendGroup <- ggproto(
     spacing    <- elements$subtitle_spacing
 
     position <- elements$subtitle_position
-    aligned_top  <- all(t == t[1])
-    aligned_left <- all(l == l[1])
-    if (position != "top" & aligned_top) {
+    aligned_top  <- all(t == t[1L])
+    aligned_left <- all(l == l[1L])
+    if (position != "top" && aligned_top) {
       b[] <- max(b) # align bottom
     }
-    if (position != "left" & aligned_left) {
+    if (position != "left" && aligned_left) {
       r[] <- max(r) # align right
     }
 
@@ -204,7 +262,8 @@ GuideLegendGroup <- ggproto(
 
     topleft <- position %in% c("top", "left")
     if (topleft) {
-      spacing_index <- (subtitle_cell <- subtitle_cell - 1L) - 1L
+      subtitle_cell <- subtitle_cell - 1L
+      spacing_index <- subtitle_cell - 1L
     } else {
       spacing_index <- subtitle_cell + 1L
     }
@@ -224,13 +283,16 @@ GuideLegendGroup <- ggproto(
       if (aligned_top) {
         widths <- set_within(widths, start - 1L, spacing)
       }
-      widths <- insert_spillover(widths, start, end, sub_width, position, just$hjust)
+      widths <- insert_spillover(
+        widths, start, end,
+        sub_width, position, just$hjust
+      )
 
       index <- reeindex(length(widths), start, end)
       key_col <- index[key_col]
       lab_col <- index[lab_col]
-      l <- index[l] - 1
-      r <- index[r] + 1
+      l <- index[l] - 1L
+      r <- index[r] + 1L
     } else {
       col_add <- findInterval(key_col, cells, left.open = !topleft)
       l <- r <- subtitle_cell
@@ -243,13 +305,16 @@ GuideLegendGroup <- ggproto(
       if (aligned_left) {
         heights <- set_within(heights, start - 1L, spacing)
       }
-      heights <- insert_spillover(heights, start, end, sub_height, position, just$vjust)
+      heights <- insert_spillover(
+        heights, start, end,
+        sub_height, position, just$vjust
+      )
 
       index <- reeindex(length(heights), start, end)
       key_row <- index[key_row]
       lab_row <- index[lab_row]
-      t <- index[t] - 1
-      b <- index[b] + 1
+      t <- index[t] - 1L
+      b <- index[b] + 1L
     }
 
     key_row <- key_row + row_add
@@ -303,8 +368,10 @@ GuideLegendGroup <- ggproto(
                          get_just(elements$title))
     gt <- gtable_add_padding(gt, unit(elements$padding, "cm"))
     if (!is_zero(elements$background)) {
-      gt <- gtable_add_grob(gt, elements$background, name = "background",
-                            clip = "off", t = 1, r = -1, b = -1, l = 1, z = -Inf)
+      gt <- gtable_add_grob(
+        gt, elements$background, t = 1L, r = -1L, b = -1L, l = 1L, z = -Inf,
+        name = "background", clip = "off"
+      )
     }
     gt
   }
@@ -320,9 +387,9 @@ group_design <- function(key, nrow = NULL, ncol = NULL,
 
   if (is.null(nrow) && is.null(ncol)) {
     if (direction == "horizontal") {
-      nrow <- ceiling(n / 5)
+      nrow <- ceiling(n / 5.0)
     } else {
-      ncol <- ceiling(n / 20)
+      ncol <- ceiling(n / 20.0)
     }
   }
 
@@ -331,7 +398,9 @@ group_design <- function(key, nrow = NULL, ncol = NULL,
   groups
 }
 
-apply_group_design <- function(key, groups, direction = "vertical", byrow = FALSE) {
+apply_group_design <- function(
+  key, groups, direction = "vertical", byrow = FALSE
+) {
 
   nrow <- rep(groups$nrow, groups$count)
   ncol <- rep(groups$ncol, groups$count)
@@ -341,16 +410,16 @@ apply_group_design <- function(key, groups, direction = "vertical", byrow = FALS
 
   if (byrow) {
     row <- ceiling(sub_index / ncol)
-    col <- (sub_index - 1L) %% ncol + 1
+    col <- (sub_index - 1L) %% ncol + 1L
   } else {
-    row <- (sub_index - 1L) %% nrow + 1
+    row <- (sub_index - 1L) %% nrow + 1L
     col <- ceiling(sub_index / nrow)
   }
 
   if (direction == "vertical") {
-    row <- row + rep(cumsum(c(0, groups$nrow[-nrow(groups)])), groups$count)
+    row <- row + rep(cumsum(c(0L, groups$nrow[-nrow(groups)])), groups$count)
   } else {
-    col <- col + rep(cumsum(c(0, groups$ncol[-nrow(groups)])), groups$count)
+    col <- col + rep(cumsum(c(0L, groups$ncol[-nrow(groups)])), groups$count)
   }
 
   key$.index <- index
@@ -360,22 +429,22 @@ apply_group_design <- function(key, groups, direction = "vertical", byrow = FALS
 }
 
 set_within <- function(x, i, value) {
-  i <- i[i > 0 & i <= length(x)]
+  i <- i[i > 0L & i <= length(x)]
   x[i] <- value
   x
 }
 
 insert_spillover <- function(size, start, end, extra, position, just = NULL) {
   cumsize <- cumsum(size)
-  extra_size <- pmax(0, extra - (cumsize[end] - c(0, cumsize)[start]))
-  just <- (just %||% 0.5) * c(1, -1) + c(0, 1)
+  extra_size <- pmax(0.0, extra - (cumsize[end] - c(0.0, cumsize)[start]))
+  just <- (just %||% 0.5) * c(1.0, -1.0) + c(0.0, 1.0)
 
   if (position %in% c("left", "right")) {
     just <- rev(just)
   }
 
-  size <- insert_before(size, start, extra_size * just[1])
-  insert_after(size, end + match(start, start), extra_size * just[2])
+  size <- insert_before(size, start, extra_size * just[1L])
+  insert_after(size, end + match(start, start), extra_size * just[2L])
 }
 
 reeindex <- function(n, start, end) {

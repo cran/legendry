@@ -12,21 +12,27 @@
 #' @family primitives
 #'
 #' @details
-#' # Styling options
+#' ## Styling options
 #'
 #' Below are the [theme][ggplot2::theme] options that determine the styling of
 #' this guide, which may differ depending on whether the guide is used in
 #' an axis or in a legend context.
 #'
-#' ## As an axis guide
+#' | **Theme setting** | **Context** | **Type** | **Description** |
+#' | ----------------- | ----------- | -------- | --------------- |
+#' | `axis.title.{x/y}.{position}` | Axis | [`element_text()`] | The title itself. |
+#' | `legend.title` | Legend| [`element_text()`] | The title itself. |
 #'
-#' * `axis.title.{x/y}.{position}` an [`<element_text>`][ggplot2::element_text]
-#'   for the title display.
+#' There are no further styling options.
 #'
-#' ## As a legend guide
+#' The context-agnostic alternative to using `theme()` is to use
+#' [`theme_guide()`]:
 #'
-#' * `legend.title` an [`<element_text>`][ggplot2::element_text]
-#'   for the title display.
+#' ```r
+#' primitive_title(theme = theme_guide(
+#'   title = element_text(),
+#' ))
+#' ```
 #'
 #' @examples
 #' # A standard plot
@@ -38,11 +44,17 @@
 #'   x.sec = primitive_title("Horizontal Title"),
 #'   y.sec = primitive_title(c("along vertical", "Multiple tiles"))
 #' )
-primitive_title = function(title = waiver(), angle = waiver(),
-                           theme = NULL, position = waiver()) {
+#'
+#' # 'Real' titles occur once per plot.
+#' # Primitive titles repeat over facets and hide the 'real' title.
+#' p + facet_wrap(~ drv) +
+#'   guides(x = primitive_title("I am a repeated subtitle")) +
+#'   labs(x = "I am the hidden real title")
+primitive_title <- function(title = waiver(), angle = waiver(),
+                            theme = NULL, position = waiver()) {
   if (!is_waive(angle)) {
     check_number_decimal(
-      angle, min = -360, max = 360,
+      angle, min = -360.0, max = 360.0,
       allow_infinite = FALSE, allow_null = TRUE
     )
   }
@@ -78,20 +90,24 @@ PrimitiveTitle <- ggproto(
 
   extract_key = function(scale, aesthetic, ...) {
     # Need to keep track of limits for r/r.sec positions
-    data_frame0(!!aesthetic := c(-Inf, Inf), .value = scale$get_limits())
+    limits <- range(scale$continuous_range %||% scale$get_limits())
+    data_frame0(!!aesthetic := c(-Inf, Inf), .value = limits)
   },
 
   extract_params = function(scale, params, title = waiver(), ...) {
     params$my_title <-
-      scale$make_title(params$my_title %|W|% scale$name %|W|% title)
+      scale$make_title(params$my_title, scale$name, title)
     primitive_extract_params(scale, params, ...)
   },
 
   transform = function(self, params, coord, panel_params) {
     if (is_theta(params$position)) {
-      params$bbox  <- panel_params$bbox  %||% list(c(x = c(0, 1), y = c(0, 1)))
-      params$arc   <- panel_params$arc   %||% c(0, 2 * pi)
-      params$donut <- panel_params$inner_radius %||% c(0, 0.4)
+      params$bbox  <- panel_params$bbox %||%
+        list(c(x = c(0.0, 1.0), y = c(0.0, 1.0)))
+      params$arc   <- panel_params$arc %||%
+        c(0.0, 2.0 * pi)
+      params$donut <- panel_params$inner_radius %||%
+        c(0.0, 0.4)
     }
     params$key <-
       transform_key(params$key, params$position, coord, panel_params)
@@ -107,7 +123,7 @@ PrimitiveTitle <- ggproto(
       params$position,
       top = , bottom = height_cm(grobs),
       left = , right = width_cm(grobs),
-      get_attr(grobs, "offset", default = 0)
+      get_attr(grobs, "offset", default = 0.0)
     )
   },
 
@@ -153,15 +169,15 @@ draw_theta_title <- function(label, elements, params) {
   offset <- elements$offset
   donut <- params$donut
   bbox <- params$bbox
-  r <- if (position == "theta") donut[2] else donut[1]
+  r <- if (position == "theta") donut[2L] else donut[1L]
 
-  theta <- rescale(hjust, from = c(0, 1), to = params$arc)
+  theta <- rescale(hjust, from = c(0.0, 1.0), to = params$arc)
 
   n_labels <- length(label)
-  if (n_labels > 1) {
+  if (n_labels > 1L) {
     theta <- rescale(
-      seq(0, 1, length.out = n_labels),
-      from = c(0, 1), to = params$arc
+      seq(0.0, 1.0, length.out = n_labels),
+      from = c(0.0, 1.0), to = params$arc
     )
   }
 
@@ -183,8 +199,8 @@ draw_theta_title <- function(label, elements, params) {
     theta <- theta + pi
   }
 
-  hjust <- 0.5 - sin(theta + rad) / 2
-  vjust <- 0.5 - cos(theta + rad) / 2
+  hjust <- 0.5 - sin(theta + rad) / 2.0
+  vjust <- 0.5 - cos(theta + rad) / 2.0
 
   x <- unit(x, "npc") + unit(offset * sin(theta), "cm")
   y <- unit(y, "npc") + unit(offset * cos(theta), "cm")
@@ -197,17 +213,20 @@ draw_theta_title <- function(label, elements, params) {
     angle = angle
   )
 
-  if (inherits(grob, "textpath")) {
-    height <- measure_textpath_labels(grob)
+  height <- if (inherits(grob, "textpath")) {
+    measure_textpath_labels(grob)
   } else {
-    height <- measure_theta_labels(title, label, margin, theta + rad, hjust, vjust)
+    measure_theta_labels(
+      title, label, margin, theta + rad,
+      list(hjust = hjust, vjust = vjust)
+    )
   }
   attr(grob, "offset") <- height
   grob
 }
 
 draw_cart_title <- function(label, elements, params) {
-  if (length(label) < 1) {
+  if (length(label) < 1L) {
     return(zeroGrob())
   }
 
@@ -216,8 +235,6 @@ draw_cart_title <- function(label, elements, params) {
 
   title    <- elements$title
   position <- params$position
-  hjust <- title$hjust
-  vjust <- title$vjust
 
   angle <- (params$angle %|W|% NULL) %||% title$angle
 
@@ -228,22 +245,26 @@ draw_cart_title <- function(label, elements, params) {
   widths  <- width_cm(singles)
   heights <- height_cm(singles)
 
+  justs <- rotate_just(element = title)
+  hjust <- justs$hjust
+  vjust <- justs$vjust
+
   if (position %in% c("left", "right")) {
     x <- hjust
-    y <- rescale(vjust, from = c(0, 1), to = limits)
+    y <- rescale(vjust, from = c(0.0, 1.0), to = limits)
   } else {
-    x <- rescale(hjust, from = c(0, 1), to = limits)
+    x <- rescale(hjust, from = c(0.0, 1.0), to = limits)
     y <- vjust
   }
 
   n_labels <- length(label)
-  if (n_labels > 1) {
+  if (n_labels > 1L) {
     if (position %in% c("top", "bottom")) {
-      x <- seq(limits[1], limits[2], length.out = n_labels)
-      hjust <- seq(0, 1, length.out = n_labels)
+      x <- seq(limits[1L], limits[2L], length.out = n_labels)
+      hjust <- seq(0.0, 1.0, length.out = n_labels)
     } else {
-      y <- seq(limits[1], limits[2], length.out = n_labels)
-      vjust <- seq(0, 1, length.out = n_labels)
+      y <- seq(limits[1L], limits[2L], length.out = n_labels)
+      vjust <- seq(0.0, 1.0, length.out = n_labels)
     }
   }
 

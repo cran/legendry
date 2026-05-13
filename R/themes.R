@@ -1,10 +1,18 @@
 
 #' Theme wrapper for guides
 #'
-#' This function has shorthand names for theme elements relating to guides. It
-#' is intended to be used as the `guide_*(theme)` argument. Because of this
-#' intent, and due to legends and axes having mutually exclusive theme elements,
-#' this function sets the elements for both simultaneously.
+#' This function does three things different than [`theme()`].
+#'
+#' 1. It has shorthand names for various guide settings, similar to
+#'   [`theme_sub_legend()`] and [`theme_sub_axis()`]
+#' 2. It simultaneously sets theme elements for axes and legends. This makes
+#'   it contextually agnostic. For example, setting `theme_guide(text)` will
+#'   populate `legend.text` and also `axis.text`.
+#' 3. It includes \pkg{legendry} specific settings.
+#'
+#' The first two things make it very good for setting the `guide_*(theme)`
+#' arguments. The second thing makes it very bad for setting plot-wide or
+#' global themes.
 #'
 #' @param text An [`<element_text>`][ggplot2::element_text] setting both
 #'   `legend.text` and `axis.text` elements.
@@ -36,8 +44,9 @@
 #'   `legendry.legend.minor.ticks.length`.
 #'   * `mini.ticks.length` sets both `legendry.axis.mini.ticks.length` and
 #'   `legendry.legend.mini.ticks.length`.
-#' @param spacing,group.spacing A [`<unit[1]>`][grid::unit()] setting both the
-#'   `legendry.guide.spacing` and `legendry.group.spacing` theme elements.
+#' @param spacing,group.spacing,table.spacing A [`<unit[1]>`][grid::unit()]
+#'   settingthe `legendry.guide.spacing`, `legendry.group.spacing` and
+#'   `legendry.table.spacing` theme elements respectively.
 #' @param key An [`<element_rect>`][ggplot2::element_rect] setting the
 #'   `legend.key` element.
 #' @param key.size,key.width,key.height A [`<unit>`][grid::unit()] setting the
@@ -48,6 +57,8 @@
 #'   `legend.key.spacing.y` elements respectively.
 #' @param key.margin A [`<margin>`][ggplot2::margin] setting the margin around
 #'   legend glyphs.
+#' @param key.justification A [`<numeric[2]>`] passed to the
+#'   `legend.key.justification` setting.
 #' @param frame An [`<element_rect>`][ggplot2::element_rect] setting the
 #'   `legend.frame` element.
 #' @param byrow A `<logical[1]>` setting the `legend.byrow` element.
@@ -64,12 +75,21 @@
 #' @param fence,fence.post,fence.rail An
 #'   [`<element_line>`][ggplot2::element_line] setting the `legendry.fence`,
 #'   `legendry.fence.post` and `legendry.fence.rail` respectively.
+#' @param zebra.light,zebra.dark An [`<element_rect>`][ggplot2::element_rect]
+#'   setting the `legendry.zebra.light` and `legendry.zebra.dark` settings
+#'   respectively.
+#' @param point An [`<element_point>`][ggplot2::element_point] setting the
+#'   `legendry.point` element.
+#' @param connector An [`<elemenet_line>`][ggplot2::element_line] setting the
+#'   `legendry.connector` element.
 #'
 #' @return A `<theme>` object that can be provided to a guide.
 #' @export
 #'
 #' @examples
-#' red_ticks <- theme_guide(ticks = element_line(colour = "red", linewidth = 0.5))
+#' red_ticks <- theme_guide(
+#'   ticks = element_line(colour = "red", linewidth = 0.5)
+#' )
 #'
 #' # Both axis and colourbar gain red ticks
 #' ggplot(mpg, aes(displ, hwy, colour = cty)) +
@@ -79,47 +99,53 @@
 #'     x = guide_axis(theme = red_ticks)
 #'   )
 theme_guide <- function(
-    text = NULL,
-    line = NULL,
+  text = NULL,
+  line = NULL,
 
-    title = NULL,
-    subtitle = NULL,
+  title = NULL,
+  subtitle = NULL,
 
-    text.position = NULL,
-    title.position = NULL,
-    subtitle.position = NULL,
+  text.position = NULL,
+  title.position = NULL,
+  subtitle.position = NULL,
 
-    ticks = NULL,
-    minor.ticks = NULL,
-    mini.ticks = NULL,
+  ticks = NULL,
+  minor.ticks = NULL,
+  mini.ticks = NULL,
 
-    ticks.length = NULL,
-    minor.ticks.length = NULL,
-    mini.ticks.length = NULL,
+  ticks.length = NULL,
+  minor.ticks.length = NULL,
+  mini.ticks.length = NULL,
 
-    spacing = NULL,
-    group.spacing = NULL,
+  spacing = NULL,
+  group.spacing = NULL,
+  table.spacing = NULL,
 
-    key = NULL,
-    key.size = NULL,
-    key.width = NULL,
-    key.height = NULL,
-    key.spacing = NULL,
-    key.spacing.x = NULL,
-    key.spacing.y = NULL,
-    key.margin = NULL,
+  key = NULL,
+  key.size = NULL,
+  key.width = NULL,
+  key.height = NULL,
+  key.spacing = NULL,
+  key.spacing.x = NULL,
+  key.spacing.y = NULL,
+  key.margin = NULL,
+  key.justification = NULL,
 
-    frame = NULL,
-    byrow = NULL,
-    background = NULL,
-    margin = NULL,
+  frame = NULL,
+  byrow = NULL,
+  background = NULL,
+  margin = NULL,
 
-    bracket = NULL,
-    bracket.size = NULL,
-    box = NULL,
-    fence = NULL,
-    fence.post = NULL,
-    fence.rail = NULL
+  bracket = NULL,
+  bracket.size = NULL,
+  box = NULL,
+  fence = NULL,
+  fence.post = NULL,
+  fence.rail = NULL,
+  zebra.light = NULL,
+  zebra.dark = NULL,
+  point = NULL,
+  connector = NULL
 ) {
 
   theme <- list(
@@ -155,7 +181,7 @@ theme_guide <- function(
     axis.minor.ticks.y.left = minor.ticks,
     axis.minor.ticks.y.right = minor.ticks,
 
-    legendry.legend.minor.ticks.lenth = minor.ticks.length,
+    legendry.legend.minor.ticks.length = minor.ticks.length,
     axis.minor.ticks.length = minor.ticks.length,
 
     legendry.axis.mini.ticks = mini.ticks,
@@ -166,6 +192,7 @@ theme_guide <- function(
 
     legendry.guide.spacing = spacing,
     legendry.group.spacing = group.spacing,
+    legendry.table.spacing = table.spacing,
 
     legend.key = key,
     legend.key.spacing = key.spacing,
@@ -174,6 +201,7 @@ theme_guide <- function(
     legend.key.size = key.size,
     legend.key.width = key.width,
     legend.key.height = key.height,
+    legend.key.justification = key.justification,
     legendry.legend.key.margin = key.margin,
 
     legend.frame = frame,
@@ -186,9 +214,13 @@ theme_guide <- function(
     legendry.box = box,
     legendry.fence = fence,
     legendry.fence.post = fence.post,
-    legendry.fence.rail = fence.rail
+    legendry.fence.rail = fence.rail,
+    legendry.zebra.light = zebra.light,
+    legendry.zebra.dark = zebra.dark,
+    legendry.point = point,
+    legendry.connector = connector
   )
-  theme <- theme[lengths(theme) > 0]
+  theme <- theme[lengths(theme) > 0L]
   theme(!!!theme)
 }
 
@@ -202,7 +234,7 @@ register_legendry_elements <- function() {
   marg <- tree$plot.margin$class
 
   register_theme_elements(
-    legendry.bracket.size = unit(2, "mm"),
+    legendry.bracket.size = unit(2.0, "mm"),
     legendry.bracket = element_line(),
     legendry.fence = element_line(),
     legendry.fence.post = element_line(),
@@ -218,9 +250,16 @@ register_legendry_elements <- function() {
     legendry.axis.mini.ticks = element_line(),
     legendry.axis.mini.ticks.length = rel(0.5),
     legendry.guide.spacing = unit(2.25, "pt"),
-    legendry.group.spacing = rel(2),
-    legendry.axis.subtitle = element_text(margin = margin(5.5, 5.5, 5.5, 5.5)),
-    legendry.axis.subtitle.position = c("left", "top"),
+    legendry.group.spacing = rel(2.0),
+    legendry.axis.subtitle = NULL,
+    legendry.axis.subtitle.position = c("left", "top", "bottom", "right"),
+    legendry.symbol = element_point(),
+    legendry.connector = element_line(),
+    legendry.zebra.light = NULL,
+    legendry.zebra.dark = NULL,
+    legendry.table.vlines = element_blank(),
+    legendry.table.hlines = element_blank(),
+    legendry.table.spacing = rel(0.5),
     element_tree = list(
       legendry.bracket.size = el_def("unit"),
       legendry.bracket = el_def(line, "line"),
@@ -231,7 +270,8 @@ register_legendry_elements <- function() {
       legendry.legend.minor.ticks = el_def(line, "legend.ticks"),
       legendry.legend.minor.ticks.length = el_unit("legend.ticks.length"),
       legendry.legend.mini.ticks = el_def(line, "legendry.legend.minor.ticks"),
-      legendry.legend.mini.ticks.length = el_unit("legendry.legend.minor.ticks.length"),
+      legendry.legend.mini.ticks.length =
+        el_unit("legendry.legend.minor.ticks.length"),
       legendry.legend.subtitle = el_def(text, "legend.title"),
       legendry.legend.subtitle.position = el_def("character"),
       legendry.legend.key.margin = el_def(marg, "legend.margin"),
@@ -240,7 +280,14 @@ register_legendry_elements <- function() {
       legendry.guide.spacing = el_unit("axis.ticks.length"),
       legendry.group.spacing = el_unit("legend.key.spacing"),
       legendry.axis.subtitle = el_def(text, "axis.text"),
-      legendry.axis.subtitle.position = el_def("character")
+      legendry.axis.subtitle.position = el_def("character"),
+      legendry.symbol = el_def(element_point, "point"),
+      legendry.connector = el_def(line, "line"),
+      legendry.zebra.light = el_def(rect, "plot.background"),
+      legendry.zebra.dark  = el_def(rect, "panel.background"),
+      legendry.table.vlines = el_def(line, "axis.line"),
+      legendry.table.hlines = el_def(line, "axis.line"),
+      legendry.table.spacing = el_def(c("unit", "rel"), "spacing")
     )
   )
 }

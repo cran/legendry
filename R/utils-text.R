@@ -1,22 +1,40 @@
 
 setup_legend_text <- function(theme, position = NULL, direction = "vertical") {
+
   position <- position %||%
     calc_element("legend.text.position", theme) %||%
     switch(direction, horizontal = "bottom", vertical = "right")
-  gap    <- calc_element("legend.key.spacing", theme) %||% unit(0, "pt")
+
+  gap    <- calc_element("legend.key.spacing", theme) %||% unit(0.0, "pt")
+
   margin <- calc_element("text", theme)$margin %||% margin()
-  margin <- position_margin(position, margin, gap)
-  text <- theme(
-    text = switch(
-      position,
-      top    = element_text(hjust = 0.5, vjust = 0.0, margin = margin),
-      bottom = element_text(hjust = 0.5, vjust = 1.0, margin = margin),
-      left   = element_text(hjust = 1.0, vjust = 0.5, margin = margin),
-      right  = element_text(hjust = 0.0, vjust = 0.5, margin = margin),
-      element_text(hjust = 0.5, vjust = 0.5, margin = margin)
-    )
+  text <- justify_margins(position, margin, gap)
+  calc_element("legend.text", theme + theme(text = text))
+}
+
+setup_side_title <- function(theme, position = NULL, type = "axis") {
+  name <- switch(
+    type,
+    axis = "legendry.axis.subtitle",
+    "legendry.legend.subtitle"
   )
-  calc_element("legend.text", theme + text)
+
+  position <- position %||%
+    calc_element(paste0(name, ".position"), theme) %||%
+    "left"
+
+  gap <- switch(
+    type,
+    axis = {
+      position_name <- suffix_position("axis.ticks.length", position)[[1L]]
+      (calc_element(position_name, theme) %||% unit(0.0, "pt")) * 2.0
+    },
+    calc_element("legend.key.spacing", theme) %||% unit(0.0, "pt")
+  )
+
+  margin <- calc_element("text", theme)$margin %||% margin()
+  text <- justify_margins(position, margin, gap)
+  calc_element(name, theme + theme(text = text))
 }
 
 setup_legend_title <- function(theme, position = NULL, direction = "vertical",
@@ -24,70 +42,82 @@ setup_legend_title <- function(theme, position = NULL, direction = "vertical",
   position <- position %||%
     calc_element("legend.title.position", theme) %||%
     switch(direction, horizontal = "left", vertical = "top")
-  gap <- calc_element("legend.key.spacing", theme) %||% unit(0, "pt")
+  gap <- calc_element("legend.key.spacing", theme) %||% unit(0.0, "pt")
   margin <- calc_element("text", theme)$margin %||% margin()
   margin <- position_margin(position, margin, gap)
-  title <- theme(text = element_text(hjust = 0, vjust = 0.5, margin = margin))
+  title <- theme(text = element_text(hjust = 0.0, vjust = 0.5, margin = margin))
   calc_element(element, theme + title)
 }
 
-position_margin <- function(position, margin = margin(), gap = unit(0, "pt")) {
+justify_margins <- function(position, margin, gap) {
+  margin <- position_margin(position, margin, gap)
   switch(
     position,
-    top    = replace(margin, 3, margin[3] + gap),
-    bottom = replace(margin, 1, margin[1] + gap),
-    left   = replace(margin, 2, margin[2] + gap),
-    right  = replace(margin, 4, margin[4] + gap),
+    top    = element_text(hjust = 0.5, vjust = 0.0, margin = margin),
+    bottom = element_text(hjust = 0.5, vjust = 1.0, margin = margin),
+    left   = element_text(hjust = 1.0, vjust = 0.5, margin = margin),
+    right  = element_text(hjust = 0.0, vjust = 0.5, margin = margin),
+    element_text(hjust = 0.5, vjust = 0.5, margin = margin)
+  )
+}
+
+position_margin <- function(
+  position, margin = margin(), gap = unit(0.0, "pt")
+) {
+  switch(
+    position,
+    top    = replace(margin, 3L, margin[3L] + gap),
+    bottom = replace(margin, 1L, margin[1L] + gap),
+    left   = replace(margin, 2L, margin[2L] + gap),
+    right  = replace(margin, 4L, margin[4L] + gap),
     margin + gap
   )
 }
 
-get_text_dim_cm <- function(label, style, type = "both") {
-  if (is_theme_element(style, "text")) {
-    style <- get_text_gp(style)
-  }
-  check_inherits(style, "gpar", "a {.cls gpar} object")
-  pushViewport(viewport(gp = style), recording = FALSE)
-  on.exit(popViewport(recording = FALSE))
-  switch(
-    type,
-    width  = convertWidth( stringWidth(label),  unitTo = "cm", valueOnly = TRUE),
-    height = convertHeight(stringHeight(label), unitTo = "cm", valueOnly = TRUE),
-    list(
-      width  = convertWidth( stringWidth(label),  unitTo = "cm", valueOnly = TRUE),
-      height = convertHeight(stringHeight(label), unitTo = "cm", valueOnly = TRUE)
-    )
+# Utility for grabbing the justification of an element
+get_just <- function(element) {
+  element <- destructure_element(element)
+  rotate_just(
+    element$angle %||% 0.0,
+    element$hjust %||% 0.5,
+    element$vjust %||% 0.5
   )
 }
 
-get_text_gp <- function(x) {
-  if (!is_theme_element(x, "text")) {
-    return(NULL)
+validate_labels <- function(labels) {
+  if (!is.list(labels)) {
+    return(labels)
   }
-  gpar(
-    fontfamily = x$family,
-    fontface   = x$face,
-    fontsize   = x$size,
-    lineheight = x$lineheight
-  )
+  if (any(map_lgl(labels, is.language))) {
+    do.call(expression, labels)
+  } else {
+    unlist(labels)
+  }
 }
 
-get_fontmetrics <- function(x) {
-  if (is_theme_element(x, "text")) {
-    x <- get_text_gp(x)
+angle_labels <- function(element, angle, position) {
+  if (!is_theme_element(element, "text") ||
+      is_waive(angle) ||
+      is_null(angle)  ||
+      !position %in% .trbl) {
+    return(element)
   }
-  check_inherits(x, "gpar", "a {.cls gpar} object")
-  check_installed("systemfonts")
-  res <- 72
-  info <- systemfonts::font_info(
-    family = x$fontfamily,
-    italic = x$font %in% c(3, 4),
-    bold   = x$font %in% c(2, 4),
-    size   = x$fontsize,
-    res    = res
-  )
-  info <- as.list(info)
-  i <- match(c("max_ascend", "underline_size"), names(info))
-  info[i[1]:i[2]] <- lapply(info[i[1]:i[2]], function(x) .in2cm * x / res)
-  info
+
+  position <- arg_match0(as.character(position), .trbl)
+  radians <- deg2rad(angle)
+  digits <- 3
+
+  cosine <- sign(round(cos(radians), digits)) / 2 + 0.5
+  sine   <- sign(round(sin(radians), digits)) / 2 + 0.5
+
+  hjust <-
+    switch(position, left = cosine, right = 1 - cosine, top = 1 - sine, sine)
+  vjust <-
+    switch(position, left = 1 - sine, right = sine, top = 1 - cosine, cosine)
+
+  element$angle <- angle %||% element$angle
+  element$hjust <- hjust %||% element$hjust
+  element$vjust <- vjust %||% element$vjust
+
+  element
 }

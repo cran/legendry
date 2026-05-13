@@ -20,6 +20,7 @@ theme_guide(
   mini.ticks.length = NULL,
   spacing = NULL,
   group.spacing = NULL,
+  table.spacing = NULL,
   key = NULL,
   key.size = NULL,
   key.width = NULL,
@@ -28,6 +29,7 @@ theme_guide(
   key.spacing.x = NULL,
   key.spacing.y = NULL,
   key.margin = NULL,
+  key.justification = NULL,
   frame = NULL,
   byrow = NULL,
   background = NULL,
@@ -37,20 +39,24 @@ theme_guide(
   box = NULL,
   fence = NULL,
   fence.post = NULL,
-  fence.rail = NULL
+  fence.rail = NULL,
+  zebra.light = NULL,
+  zebra.dark = NULL,
+  point = NULL,
+  connector = NULL
 )
 }
 \arguments{
-\item{text}{An \code{\link[ggplot2:element]{<element_text>}} setting both
+\item{text}{An \code{\link[ggplot2:element_text]{<element_text>}} setting both
 \code{legend.text} and \code{axis.text} elements.}
 
-\item{line}{An \code{\link[ggplot2:element]{<element_line>}} setting both
+\item{line}{An \code{\link[ggplot2:element_line]{<element_line>}} setting both
 \code{legend.axis.line} and \code{axis.line} elements.}
 
-\item{title}{An \code{\link[ggplot2:element]{<element_text>}} setting both
+\item{title}{An \code{\link[ggplot2:element_text]{<element_text>}} setting both
 \code{legend.title} and \code{axis.title} elements.}
 
-\item{subtitle}{An \code{\link[ggplot2:element]{<element_text>}} setting both
+\item{subtitle}{An \code{\link[ggplot2:element_text]{<element_text>}} setting both
 \code{legendry.legend.subtitle} and \code{legendry.axis.subtitle} elements.}
 
 \item{text.position, title.position, subtitle.position}{One of \code{"top"},
@@ -62,14 +68,14 @@ theme_guide(
 \code{legendry.axis.subtitle.position}
 }}
 
-\item{ticks}{An \code{\link[ggplot2:element]{<element_line>}} setting both
+\item{ticks}{An \code{\link[ggplot2:element_line]{<element_line>}} setting both
 \code{axis.ticks} and \code{legend.ticks} elements.}
 
-\item{minor.ticks}{An \code{\link[ggplot2:element]{<element_line>}} setting
+\item{minor.ticks}{An \code{\link[ggplot2:element_line]{<element_line>}} setting
 \code{legendry.legend.minor.ticks} and all 6 of the
 \verb{axis.ticks.minor.\{r/theta/x.top/x.bottom/y.left/y.right\}} elements.}
 
-\item{mini.ticks}{An \code{\link[ggplot2:element]{<element_line>}} setting both
+\item{mini.ticks}{An \code{\link[ggplot2:element_line]{<element_line>}} setting both
 \code{legendry.legend.mini.ticks} and \code{legendry.axis.mini.ticks} elements.}
 
 \item{ticks.length, minor.ticks.length, mini.ticks.length}{A
@@ -82,10 +88,11 @@ theme_guide(
 \code{legendry.legend.mini.ticks.length}.
 }}
 
-\item{spacing, group.spacing}{A [\verb{<unit[1]>}][grid::unit()] setting both the
-\code{legendry.guide.spacing} and \code{legendry.group.spacing} theme elements.}
+\item{spacing, group.spacing, table.spacing}{A [\verb{<unit[1]>}][grid::unit()]
+settingthe \code{legendry.guide.spacing}, \code{legendry.group.spacing} and
+\code{legendry.table.spacing} theme elements respectively.}
 
-\item{key}{An \code{\link[ggplot2:element]{<element_rect>}} setting the
+\item{key}{An \code{\link[ggplot2:element_rect]{<element_rect>}} setting the
 \code{legend.key} element.}
 
 \item{key.size, key.width, key.height}{A \code{\link[grid:unit]{<unit>}} setting the
@@ -96,44 +103,70 @@ respectively.}
 setting the \code{legend.key.spacing}, \code{legend.key.spacing.x} and
 \code{legend.key.spacing.y} elements respectively.}
 
-\item{key.margin}{A \code{\link[ggplot2:element]{<margin>}} setting the margin around
+\item{key.margin}{A \code{\link[ggplot2:margin]{<margin>}} setting the margin around
 legend glyphs.}
 
-\item{frame}{An \code{\link[ggplot2:element]{<element_rect>}} setting the
+\item{key.justification}{A [\verb{<numeric[2]>}] passed to the
+\code{legend.key.justification} setting.}
+
+\item{frame}{An \code{\link[ggplot2:element_rect]{<element_rect>}} setting the
 \code{legend.frame} element.}
 
 \item{byrow}{A \verb{<logical[1]>} setting the \code{legend.byrow} element.}
 
-\item{background}{An \code{\link[ggplot2:element]{<element_rect>}} setting the
+\item{background}{An \code{\link[ggplot2:element_rect]{<element_rect>}} setting the
 \code{legend.background} element.}
 
-\item{margin}{A \code{\link[ggplot2:element]{<margin>}} setting the \code{legend.margin}
+\item{margin}{A \code{\link[ggplot2:margin]{<margin>}} setting the \code{legend.margin}
 element.}
 
-\item{bracket}{An \code{\link[ggplot2:element]{<element_line>}} setting the
+\item{bracket}{An \code{\link[ggplot2:element_line]{<element_line>}} setting the
 \code{legendry.bracket} element.}
 
 \item{bracket.size}{A [\verb{<unit[1]>}][grid::unit()] setting the
 \code{legendry.bracket.size} element.}
 
-\item{box}{An \code{\link[ggplot2:element]{<element_rect>}} setting the
+\item{box}{An \code{\link[ggplot2:element_rect]{<element_rect>}} setting the
 \code{legendry.box} element.}
 
 \item{fence, fence.post, fence.rail}{An
-\code{\link[ggplot2:element]{<element_line>}} setting the \code{legendry.fence},
+\code{\link[ggplot2:element_line]{<element_line>}} setting the \code{legendry.fence},
 \code{legendry.fence.post} and \code{legendry.fence.rail} respectively.}
+
+\item{zebra.light, zebra.dark}{An \code{\link[ggplot2:element_rect]{<element_rect>}}
+setting the \code{legendry.zebra.light} and \code{legendry.zebra.dark} settings
+respectively.}
+
+\item{point}{An \code{\link[ggplot2:element_point]{<element_point>}} setting the
+\code{legendry.point} element.}
+
+\item{connector}{An \code{\link[ggplot2:element_line]{<elemenet_line>}} setting the
+\code{legendry.connector} element.}
 }
 \value{
 A \verb{<theme>} object that can be provided to a guide.
 }
 \description{
-This function has shorthand names for theme elements relating to guides. It
-is intended to be used as the \code{guide_*(theme)} argument. Because of this
-intent, and due to legends and axes having mutually exclusive theme elements,
-this function sets the elements for both simultaneously.
+This function does three things different than \code{\link[ggplot2:theme]{theme()}}.
+}
+\details{
+\enumerate{
+\item It has shorthand names for various guide settings, similar to
+\code{\link[ggplot2:theme_sub_legend]{theme_sub_legend()}} and \code{\link[ggplot2:theme_sub_axis]{theme_sub_axis()}}
+\item It simultaneously sets theme elements for axes and legends. This makes
+it contextually agnostic. For example, setting \code{theme_guide(text)} will
+populate \code{legend.text} and also \code{axis.text}.
+\item It includes \pkg{legendry} specific settings.
+}
+
+The first two things make it very good for setting the \code{guide_*(theme)}
+arguments. The second thing makes it very bad for setting plot-wide or
+global themes.
 }
 \examples{
-red_ticks <- theme_guide(ticks = element_line(colour = "red", linewidth = 0.5))
+red_ticks <- theme_guide(
+  ticks = element_line(colour = "red", linewidth = 0.5)
+)
 
 # Both axis and colourbar gain red ticks
 ggplot(mpg, aes(displ, hwy, colour = cty)) +

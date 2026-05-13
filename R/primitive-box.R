@@ -16,26 +16,38 @@
 #' @export
 #'
 #' @details
-#' # Styling options
+#' ## Styling options
 #'
 #' Below are the [theme][ggplot2::theme] options that determine the styling of
 #' this guide, which may differ depending on whether the guide is used in
 #' an axis or in a legend context.
 #'
-#' Common to both types is the following:
+#' The possible `{position}` suffixes mentioned below are `x`, `x.top`,
+#' `x.bottom`, `y`, `y.left`, `y.right`. The `theta` and `r` position suffixes
+#' in \pkg{ggplot2} are *not* obeyed in \pkg{legendry}.
 #'
-#' * `legendry.box` an [`<element_rect>`][ggplot2::element_rect] for the boxes
-#'   to draw.
+#' | **Theme setting** | **Context** | **Type** | **Description** |
+#' | ----------------- | ----------- | -------- | --------------- |
+#' | `legendry.box` | Both | [`element_rect()`] | The boxes themselves |
+#' | `axis.text.{position}`\* | Axis | [`element_text()`] | The text in the boxes. |
+#' | `legend.text` | Legend | [`element_text()`] | The text in the boxes. |
 #'
-#' ## As an axis guide
+#' Styling options *per level* can be set in the `levels_box` and `levels_text`
+#' arguments. These override theme settings.
 #'
-#' * `axis.text.{x/y}.{position}` an [`<element_text>`][ggplot2::element_text]
-#'   for the text inside the boxes.
+#' Styling options *per range* can be set in the [range key][key_range].
+#' The `rect` and `text` prefixed properties are prioritised for the boxes and
+#' text respectively. These override theme settings and 'per level' settings.
 #'
-#' ## As a legend guide
+#' The context-agnostic alternative to using `theme()` is to use
+#' [`theme_guide()`]:
 #'
-#' * `legend.text` an [`<element_text>`][ggplot2::element_text] for the text
-#'   inside the boxes.
+#' ```r
+#' primitive_box(theme = theme_guide(
+#'   box = element_rect(),
+#'   text = element_text()
+#' ))
+#' ```
 #'
 #' @examples
 #' # A standard plot
@@ -67,13 +79,11 @@ primitive_box <- function(
   check_bool(drop_zero)
   check_number_decimal(pad_discrete, allow_infinite = FALSE)
   check_list_of(
-    levels_box,
-    c("element_rect", "element_blank", "NULL", "ggplot2::element_rect", "ggplot2::element_blank"),
+    levels_box, element_classes("rect", "blank"),
     allow_null = TRUE
   )
   check_list_of(
-    levels_text,
-    c("element_text", "element_blank", "NULL", "ggplot2::element_rect", "ggplot2::element_blank"),
+    levels_text, element_classes("text", "blank"),
     allow_null = TRUE
   )
 
@@ -120,24 +130,21 @@ PrimitiveBox <- ggproto(
   extract_params = extract_range_params,
 
   extract_decor = function(scale, aesthetic, key, ...) {
-
     key <- vec_slice(key, key$.draw)
-    n_keys <- nrow(key)
-    value <- vec_interleave(key$start, key$end)
-
-    data_frame0(
-      !!aesthetic := value,
-      group  = rep(seq_len(n_keys), each = 2),
-      .level = rep(key$.level, each = 2)
-    )
+    decor <- key[setdiff(names(key), c("start", "end"))]
+    decor$group <- seq_len(nrow(key))
+    decor <- vec_rep_each(decor, 2)
+    decor[[aesthetic]] <- vec_interleave(key$start, key$end)
+    decor
   },
 
   transform = function(self, params, coord, panel_params) {
     params$key <-
       transform_key(params$key, params$position, coord, panel_params)
-    params$bbox <- panel_params$bbox %||% list(x = c(0, 1), y = c(0, 1))
+    params$bbox <- panel_params$bbox %||% list(x = c(0.0, 1.0), y = c(0.0, 1.0))
     if (!is_empty(params$decor)) {
-      other <- switch(params$position, bottom = , left = , theta.sec = -Inf, Inf)
+      other <-
+        switch(params$position, bottom = , left = , theta.sec = -Inf, Inf)
       params$decor <- replace_null(params$decor, x = other, y = other)
       params$decor <- coord_munch(coord, params$decor, panel_params)
       if (params$position == "theta.sec") {
@@ -165,7 +172,7 @@ PrimitiveBox <- ggproto(
     key <- justify_ranges(key, levels, elements$text, text_levels)
 
     if (is_theta(position)) {
-      add <- if (position == "theta.sec") pi else 0
+      add <- if (position == "theta.sec") pi else 0.0
       key <- polar_xy(key, key$r, key$theta + add, params$bbox)
     }
 
@@ -221,7 +228,7 @@ PrimitiveBox <- ggproto(
     elems <- self$setup_elements(params, self$elements, theme)
     box <- self$build_box(params$key, params$decor, elems, params)
 
-    if (length(box) < 1) {
+    if (length(box) < 1L) {
       return(zeroGrob())
     }
 
@@ -237,43 +244,46 @@ PrimitiveBox <- ggproto(
 
 # Helpers -----------------------------------------------------------------
 
-draw_box = function(decor, element, size, offset, position) {
-  if (nrow(decor) < 2 || is_blank(element)) {
+draw_box <- function(decor, element, size, offset, position) {
+  if (nrow(decor) < 2L || is_blank(element)) {
     return(zeroGrob())
   }
   aes <- switch(position, top = , bottom = "x", left = , right = "y", "theta")
-
   rle <- new_rle(decor$group)
+  props <- element_key_properties(vec_slice(decor, rle$start), "rect")
+
   if (is_theta(position)) {
-    rev <- vec_slice(decor, nrow(decor):1)
+    rev <- vec_slice(decor, rev(vec_seq_along(decor)))
     x <- unit(c(decor$x, rev$x), "npc")
     y <- unit(c(decor$y, rev$y), "npc")
     theta  <- c(decor$theta, rev$theta)
-    offset <- rep(c(0, size) + offset, each = nrow(decor))
+    offset <- rep(c(0.0, size) + offset, each = nrow(decor))
     x <- x + unit(sin(theta) * offset, "cm")
     y <- y + unit(cos(theta) * offset, "cm")
     id <- c(decor$group, rev$group)
-    gp <- gpar(
-      col = element$colour,
-      fill = element$fill,
-      lwd = (element$linewidth * .pt) %0% NULL,
-      lty = (element$linetype)
+    element <- destructure_element(element)
+    gp <- gg_par(
+      col  = props$colour    %||% element$colour,
+      fill = props$fill      %||% element$fill,
+      lwd  = props$linewidth %||% element$linewidth,
+      lty  = props$linetype  %||% element$linetype,
+      linejoin = element$linejoin
     )
     grob <- polygonGrob(x = x, y = y, id = id, gp = gp)
     return(grob)
   }
 
-  rle <- new_rle(decor$group)
   start <- decor[[aes]][rle$start]
   end   <- decor[[aes]][rle$end]
   min <- pmin(start, end)
   max <- pmax(start, end)
   args <- list(
-    x = min, width = max - min, hjust = 0, vjust = 0.5,
-    y = 0.5, height = 1
+    x = min, width = max - min,
+    hjust = 0.0, vjust = 0.5,
+    y = 0.5, height = 1.0
   )
   if (position %in% c("left", "right")) {
     args <- flip_names(args)
   }
-  inject(element_grob(element, !!!args))
+  inject(element_grob(element, !!!args, !!!props))
 }

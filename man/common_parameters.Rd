@@ -4,10 +4,13 @@
 \alias{common_parameters}
 \title{common parameters in \pkg{legendry}}
 \arguments{
-\item{title}{A \verb{<character[1]>} or \verb{<expression[1]>} indicating the title of
-the guide. If \code{NULL}, the title is not shown. The default,
-\code{\link[ggplot2:waiver]{waiver()}}, takes the name of the scale object or
-the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.}
+\item{title}{One of the following to indicate the title of the guide:
+\itemize{
+\item A \verb{<character[1]>} or \verb{<expression[1]>} to set a custom title.
+\item \code{NULL} to not display any title.
+\item \code{\link[ggplot2:waiver]{waiver()}} (default) to take the name of the scale
+object or the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.
+}}
 
 \item{theme}{A \code{\link[ggplot2:theme]{<theme>}} object to style the guide individually or
 differently from the plot's theme settings. The \code{theme} argument in the
@@ -28,7 +31,7 @@ be build.}
 \code{"horizontal"} or \code{"vertical"}.}
 
 \item{angle}{A specification for the text angle. Compared to setting the \code{angle} argument
-in \code{\link[ggplot2:element]{element_text()}}, this argument uses some
+in \code{\link[ggplot2:element_text]{element_text()}}, this argument uses some
 heuristics to automatically pick the \code{hjust} and \code{vjust} that you
 probably want. Can be one of the following:
 \itemize{
@@ -41,6 +44,8 @@ cases.
 \item{override.aes}{A named \verb{<list>} specifying aesthetic parameters of the
 key glyphs. See details and examples in
 \code{\link[ggplot2:guide_legend]{guide_legend()}}.}
+
+\item{call}{A \link[rlang:topic-error-call]{call} to display in messages.}
 }
 \description{
 This is a collection of common parameters so they needn't be re-documented

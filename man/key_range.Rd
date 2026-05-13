@@ -5,13 +5,16 @@
 \alias{key_range_auto}
 \alias{key_range_manual}
 \alias{key_range_map}
+\alias{key_range_rle}
 \title{Range keys}
 \usage{
 key_range_auto(sep = "[^[:alnum:]]+", reverse = FALSE, ...)
 
-key_range_manual(start, end, name = NULL, level = NULL, ...)
+key_range_manual(start, end, name = NULL, level = NULL, ..., call = NULL)
 
-key_range_map(data, ..., .call = caller_env())
+key_range_map(data, ..., call = NULL)
+
+key_range_rle(x, ..., call = NULL)
 }
 \arguments{
 \item{sep}{A \verb{<character[1]>} giving a \link[base:regex]{regular expression} to
@@ -24,12 +27,20 @@ labels as the inner labels and the last labels as the outer labels.
 If \code{TRUE}, thee first labels are treated as the outer labels and the last
 labels are treated as the inner labels.}
 
-\item{...}{\code{\link[rlang:topic-data-mask]{<data-masking>}} A set of mappings
-similar to those provided to \code{\link[ggplot2:aes]{aes()}}, which will be
-evaluated in the \code{data} argument.
-For \code{key_range_map()}, these \emph{must} contain \code{start} and \code{end} mappings.
-Can contain additional parameters for text styling, namely \code{colour},
-\code{family}, \code{face}, \code{size}, \code{hjust}, \code{vjust}, \code{angle} and \code{lineheight}.}
+\item{...}{The \code{...} parameter has two purposes.
+\enumerate{
+\item In \code{key_range_map()} it is \code{\link[rlang:topic-data-mask]{<data-masking>}}.
+A set of mappings similar to those provided to \code{\link[ggplot2:aes]{aes()}},
+which will be evaluated in the \code{data} argument. These \emph{must} contain
+\code{start} and \code{end} mappings.
+\item In other keys, \code{...} can be used to transfer graphical properties to the
+individual ranges of a guide. For example, using \code{colour = "blue"} will
+draw parts of the guides associated with ranges in blue. There is a shallow
+hierarchy in that \code{text_colour}, \code{line_colour}, \code{rect_colour} and
+\code{point_colour} are the specific properties for elements, but all inherit
+from the main \code{colour} setting. Likewise, \code{size}, \code{linewidth}, \code{linetype}
+and \code{fill} have specific variants for elements.
+}}
 
 \item{start, end}{A vector that can be interpreted by the scale, giving the
 start and end positions of each range respectively.}
@@ -40,11 +51,13 @@ start and end positions of each range respectively.}
 between different ranges. When \code{level} is smaller than 1, no brackets are
 drawn.}
 
+\item{call}{A \link[rlang:topic-error-call]{call} to display in messages.}
+
 \item{data}{A \verb{<data.frame>} or similar object coerced by
 \code{\link[ggplot2:fortify]{fortify()}} to a \verb{<data.frame>}, in which the \code{mapping}
 argument is evaluated.}
 
-\item{.call}{A \link[rlang:topic-error-call]{call} to display in messages.}
+\item{x}{A \verb{<vector[n]>} for which to determine run-starts and run-ends.}
 }
 \value{
 For \code{key_range_auto()} a function. For \code{key_range_manual()} and
@@ -59,6 +72,8 @@ different methods:
 to infer ranges from the scale's labels.
 \item \code{key_range_manual()} uses user-provided vectors to set ranges.
 \item \code{key_range_map()} makes mappings from a \verb{<data.frame>} to set ranges.
+\item \code{key_range_rle()} uses run-length encoding to determine the start and
+end of runs (blocks of repeated data values).
 }
 }
 \details{
@@ -93,9 +108,12 @@ key_range_manual(
 
 # Values from a <data.frame>
 key_range_map(presidential, start = start, end = end, name = name)
+
+# Values from run length encoding
+key_range_rle(c("AB", "AB", "C", "DEF", "DEF", "DEF"))
 }
 \seealso{
-Other keys: 
+Other keys:
 \code{\link{key_group}},
 \code{\link{key_segments}},
 \code{\link{key_specialty}},

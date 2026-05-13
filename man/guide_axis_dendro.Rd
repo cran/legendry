@@ -11,12 +11,12 @@ guide_axis_dendro(
   labels = TRUE,
   space = rel(10),
   vanish = TRUE,
-  n.dodge = 1,
+  n.dodge = 1L,
   angle = waiver(),
   check.overlap = FALSE,
   ticks = "none",
   axis_line = "none",
-  order = 0,
+  order = 0L,
   position = waiver()
 )
 }
@@ -25,10 +25,13 @@ guide_axis_dendro(
 in the linked topic. Alternatively, an object of class
 \code{\link[stats:hclust]{<hclust>}} that automatically invokes \code{key_dendro()}.}
 
-\item{title}{A \verb{<character[1]>} or \verb{<expression[1]>} indicating the title of
-the guide. If \code{NULL}, the title is not shown. The default,
-\code{\link[ggplot2:waiver]{waiver()}}, takes the name of the scale object or
-the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.}
+\item{title}{One of the following to indicate the title of the guide:
+\itemize{
+\item A \verb{<character[1]>} or \verb{<expression[1]>} to set a custom title.
+\item \code{NULL} to not display any title.
+\item \code{\link[ggplot2:waiver]{waiver()}} (default) to take the name of the scale
+object or the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.
+}}
 
 \item{theme}{A \code{\link[ggplot2:theme]{<theme>}} object to style the guide individually or
 differently from the plot's theme settings. The \code{theme} argument in the
@@ -45,7 +48,7 @@ and if \code{TRUE}, will set guide to appropriate primitive.
 \code{primitive_} prefix.
 }}
 
-\item{space}{Either a \code{\link[grid:unit]{<unit>}} or \code{\link[ggplot2:element]{<rel>}}
+\item{space}{Either a \code{\link[grid:unit]{<unit>}} or \code{\link[ggplot2:rel]{<rel>}}
 object of length 1 determining the space allocated in the orthogonal
 direction. When the \code{space} argument is of class \verb{<rel>} (default) the
 base size is taken from the tick length theme setting.}
@@ -59,7 +62,7 @@ setting (\code{FALSE}).}
 labels can occupy to avoid overlapping labels.}
 
 \item{angle}{A specification for the text angle. Compared to setting the \code{angle} argument
-in \code{\link[ggplot2:element]{element_text()}}, this argument uses some
+in \code{\link[ggplot2:element_text]{element_text()}}, this argument uses some
 heuristics to automatically pick the \code{hjust} and \code{vjust} that you
 probably want. Can be one of the following:
 \itemize{
@@ -90,6 +93,33 @@ hierarchically clustered. Please be aware that the guide cannot affect the
 scale limits, which should be set appropriately. This guide will give
 misleading results when this step is skipped!
 }
+\details{
+\subsection{Styling options}{
+
+Because this guide is pure composite guide, the \link[ggplot2:theme]{theme}
+options that govern the styling are determined by its constituents. They are
+linked below so you can find their 'Styling options' sections.\tabular{ll}{
+   \strong{Primitive} \tab \strong{Description} \cr
+   \code{\link{compose_stack}} \tab Stacks the lines, tick marks and labels and dendrogram. \cr
+   \code{\link[=primitive_segments]{primitive_segments()}} \tab The dendrogram. \cr
+   \code{\link[=primitive_line]{primitive_line()}} \tab Makes up the axis line. \cr
+   \code{\link[=primitive_ticks]{primitive_ticks()}} \tab Makes up the tick marks. \cr
+   \code{\link[=primitive_labels]{primitive_labels()}} \tab Makes up the labels. \cr
+}
+
+
+The context-agnostic alternative to using \code{theme()} is to use
+\code{\link[=theme_guide]{theme_guide()}}:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{guide_axis_dendro(theme = theme_guide(
+  line = element_line(),
+  text = element_text(),
+  ticks = element_line(),
+  ticks.length = unit(5, "mm"),
+))
+}\if{html}{\out{</div>}}
+}
+}
 \examples{
 # Hierarchically cluster data
 clust <- hclust(dist(scale(mtcars)), "ave")
@@ -103,7 +133,8 @@ p <- ggplot(mtcars, aes(disp, rownames(mtcars))) +
 p + guides(y = guide_axis_dendro(clust))
 
 # Adding ticks and axis line
-p + guides(y = guide_axis_dendro(clust, ticks = "ticks", axis_line = "line")) +
+p +
+  guides(y = guide_axis_dendro(clust, ticks = "ticks", axis_line = "line")) +
   theme(axis.line = element_line())
 
 # Controlling space allocated to dendrogram
@@ -114,15 +145,19 @@ p + guides(y = guide_axis_dendro(clust, space = unit(4, "cm"))) +
 p + guides(y = guide_axis_dendro(clust, labels = FALSE), y.sec = "axis")
 }
 \seealso{
-Other standalone guides: 
-\code{\link{guide_axis_base}()},
-\code{\link{guide_axis_nested}()},
-\code{\link{guide_circles}()},
-\code{\link{guide_colbar}()},
-\code{\link{guide_colring}()},
-\code{\link{guide_colsteps}()},
-\code{\link{guide_legend_base}()},
-\code{\link{guide_legend_cross}()},
-\code{\link{guide_legend_group}()}
+Other standalone guides:
+\code{\link[=guide_axis_annotation]{guide_axis_annotation()}},
+\code{\link[=guide_axis_base]{guide_axis_base()}},
+\code{\link[=guide_axis_nested]{guide_axis_nested()}},
+\code{\link[=guide_axis_plot]{guide_axis_plot()}},
+\code{\link[=guide_axis_symbols]{guide_axis_symbols()}},
+\code{\link[=guide_circles]{guide_circles()}},
+\code{\link[=guide_colbar]{guide_colbar()}},
+\code{\link[=guide_colring]{guide_colring()}},
+\code{\link[=guide_colsteps]{guide_colsteps()}},
+\code{\link[=guide_legend_base]{guide_legend_base()}},
+\code{\link[=guide_legend_cross]{guide_legend_cross()}},
+\code{\link[=guide_legend_group]{guide_legend_group()}},
+\code{\link[=guide_legend_manual]{guide_legend_manual()}}
 }
 \concept{standalone guides}

@@ -14,10 +14,13 @@ primitive_spacer(
 \arguments{
 \item{space}{A [\verb{<unit[1]>}][grid::unit()]}
 
-\item{title}{A \verb{<character[1]>} or \verb{<expression[1]>} indicating the title of
-the guide. If \code{NULL}, the title is not shown. The default,
-\code{\link[ggplot2:waiver]{waiver()}}, takes the name of the scale object or
-the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.}
+\item{title}{One of the following to indicate the title of the guide:
+\itemize{
+\item A \verb{<character[1]>} or \verb{<expression[1]>} to set a custom title.
+\item \code{NULL} to not display any title.
+\item \code{\link[ggplot2:waiver]{waiver()}} (default) to take the name of the scale
+object or the name specified in \code{\link[ggplot2:labs]{labs()}} as the title.
+}}
 
 \item{theme}{A \code{\link[ggplot2:theme]{<theme>}} object to style the guide individually or
 differently from the plot's theme settings. The \code{theme} argument in the
@@ -32,17 +35,29 @@ other guides.
 }
 \description{
 This function constructs a spacer \link[=guide-primitives]{guide primitive}.
+The spacer is intended for use in \link[=guide-composition]{guide composition}.
 }
-\section{Styling options}{
-#' Below are the \link[ggplot2:theme]{theme} options that determine the styling of
-this guide. This guide does not have option dependent on its role as axis or
-legend.
-\itemize{
-\item \code{legendry.guide.spacing} A \code{\link[grid:unit]{<unit>}} setting the amount of
-spacing when the \code{space} argument is \code{NULL}.
-}
+\details{
+\subsection{Styling options}{
+
+Below are the \link[ggplot2:theme]{theme} options that determine the styling of
+this guide. In context to many primitive guides, whether it is used in an
+axis or legend has no bearing on the style.\tabular{llll}{
+   \strong{Theme setting} \tab \strong{Context} \tab \strong{Type} \tab \strong{Description} \cr
+   \code{legendry.guide.spacing} \tab Any \tab \code{\link[=unit]{unit()}} \tab Fallback amount of spacing when the \code{space} argument is \code{NULL} \cr
 }
 
+
+There are no other styling options.
+The context-agnostic alternative to using \code{theme()} is to use
+\code{\link[=theme_guide]{theme_guide()}}:
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{primitive_spacer(theme = theme_guide(
+  spacing = unit(5, "mm"),
+))
+}\if{html}{\out{</div>}}
+}
+}
 \examples{
 ggplot(mpg, aes(displ, hwy)) +
   geom_point() +
@@ -51,14 +66,14 @@ ggplot(mpg, aes(displ, hwy)) +
   )
 }
 \seealso{
-Other primitives: 
-\code{\link{primitive_box}()},
-\code{\link{primitive_bracket}()},
-\code{\link{primitive_fence}()},
-\code{\link{primitive_labels}()},
-\code{\link{primitive_line}()},
-\code{\link{primitive_segments}()},
-\code{\link{primitive_ticks}()},
-\code{\link{primitive_title}()}
+Other primitives:
+\code{\link[=primitive_box]{primitive_box()}},
+\code{\link[=primitive_bracket]{primitive_bracket()}},
+\code{\link[=primitive_fence]{primitive_fence()}},
+\code{\link[=primitive_labels]{primitive_labels()}},
+\code{\link[=primitive_line]{primitive_line()}},
+\code{\link[=primitive_segments]{primitive_segments()}},
+\code{\link[=primitive_ticks]{primitive_ticks()}},
+\code{\link[=primitive_title]{primitive_title()}}
 }
 \concept{primitives}
